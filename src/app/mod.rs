@@ -40,7 +40,7 @@ const SIZE: f32 = 32.0;
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 pub struct App {
-    data: DataFrame,
+    data: Data,
     reactive: bool,
     // Panels
     left_panel: bool,
@@ -52,10 +52,7 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            data: df! {
-                "FA" => DataFrame::empty_with_schema(&FATTY_ACIDS_SCHEMA).into_struct("".into()),
-            }
-            .unwrap(),
+            data: Data::default(),
             reactive: true,
             left_panel: true,
             tree: Tree::empty("tree"),
@@ -117,11 +114,7 @@ impl App {
                 match ron(&dropped_file) {
                     Ok(data_frame) => {
                         trace!(?data_frame);
-                        self.data
-                            .unnest(["FA"])
-                            .unwrap()
-                            .full_join(&data_frame.unnest(["FA"]).unwrap(), ["FA"], ["FA"])
-                            .unwrap();
+                        self.data.load(&data_frame).unwrap();
                         // self.tree.insert_pane(Pane::Table(TablePane {
                         //     data_frame,
                         //     settings: Default::default(),
