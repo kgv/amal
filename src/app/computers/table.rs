@@ -36,21 +36,80 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
             .alias("Time"),
         ]);
         println!("1: {}", lazy_frame.clone().collect().unwrap());
-        lazy_frame = concat(
-            [
-                lazy_frame,
-                df! {
-                    "Mode" => df! {
-                        "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
-                        "TemperatureStep" => [key.settings.interpolation.temperature_step],
-                    }.unwrap().into_struct(PlSmallStr::EMPTY),
-                }
-                .unwrap()
-                .lazy(),
-            ],
-            UnionArgs::default(),
-        )
-        .unwrap();
+        // lazy_frame = concat(
+        //     [
+        //         lazy_frame,
+        //         df! {
+        //             "Mode" => df! {
+        //                 "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
+        //                 "TemperatureStep" => [key.settings.interpolation.temperature_step],
+        //             }.unwrap().into_struct(PlSmallStr::EMPTY),
+        //         }
+        //         .unwrap()
+        //         .lazy(),
+        //     ],
+        //     UnionArgs::default(),
+        // )
+        // .unwrap();
+        let other = df! {
+            "Mode" => df! {
+                "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
+                "TemperatureStep" => [key.settings.interpolation.temperature_step],
+            }.unwrap().into_struct(PlSmallStr::EMPTY),
+            "FA" => df! {
+                "Carbons" => &[
+                    18,
+                ],
+                "Bounds" => &[
+                    df! { "Index" => [9i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [-9, -12i8], "Multiplicity" => [2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [9, 12i8], "Multiplicity" => [2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [6, 9, 12i8], "Multiplicity" => [2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [9, 12, 15i8], "Multiplicity" => [2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [11i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [11, 14i8], "Multiplicity" => [2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [8, 11, 14i8], "Multiplicity" => [2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [11, 14, 17i8], "Multiplicity" => [2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [5, 8, 11, 14i8], "Multiplicity" => [2, 2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [13i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [13, 16i8], "Multiplicity" => [2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [5, 8, 11, 14, 17i8], "Multiplicity" => [2, 2, 2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [15i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                    df! { "Index" => [4, 7, 10, 13, 16, 19i8], "Multiplicity" => [2, 2, 2, 2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+                ],
+                "Label" => &[
+                    "Methyl cis-9 oleate [Methyl cis-9-octadecenoate]",
+                    "Methyl linolelaidate [Methyl trans,trans-9,12-octadecadienoate]",
+                    "Nonadecanoic acid methyl ester",
+                    "Methyl linoleate [Methyl 9-cis,12-cis-octadecadienoate]",
+                    "Methyl-gamma-linolenate, (6Z,9Z,12Z-octadecatrienoate)",
+                    "Methyl arachidate",
+                    "Methyl alfa linolenate, Methyl (9Z,12Z,15Z)-octadeca-9,12,15-trienoate",
+                    "Methyl cis-11 eicosenoate",
+                    "Methyl heneicosanoate",
+                    "Methyl cis-11,14 eicosadienoate",
+                    "Methyl cis-8,11,14 eicosatrienoate",
+                    "Methyl behenate [Methyl docosanoate]",
+                    "Methyl cis-11,14,17 eicosatrienoate",
+                    "Methyl arachidonate",
+                    "Methyl erucate [Methyl cis-13-docosenoate]",
+                    "Methyl tricosanoate",
+                    "Methyl cis-13,16 docosadienoate",
+                    "Methyl cis-5,8,11,14,17 eicosapentaenoate",
+                    "Methyl lignocerate [Methyl tetracosanoate]",
+                    "Methyl nervonate [Methyl cis-15-tetracosenoate]",
+                    "Methyl cis-4,7,10,13,16,19 docosahexaenoate",
+                ],
+            }?.into_struct(PlSmallStr::EMPTY),
+        }
+        .unwrap()
+        .lazy();
         println!("2: {}", lazy_frame.clone().collect().unwrap());
         // lazy_frame = lazy_frame.join(
         //     df! {
