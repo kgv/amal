@@ -137,7 +137,7 @@ mod test {
                     "Methyl cis-4,7,10,13,16,19 docosahexaenoate",
                 ],
             }?.into_struct(PlSmallStr::EMPTY),
-            "Temperature" => [
+            "OnsetTemperature" => [
                 60,
                 60,
                 60,
@@ -175,7 +175,7 @@ mod test {
                 60,
                 60,
             ],
-            "DeltaTemperature" => [
+            "TemperatureStep" => [
                 2,
                 2,
                 2,

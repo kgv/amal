@@ -68,7 +68,7 @@ impl Behavior {
                             //     // }
                             // }
                         }
-                        pane.settings(ui);
+                        // pane.settings(ui);
                     });
             }
         }

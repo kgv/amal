@@ -1,120 +1,208 @@
-use std::fmt::{self, Display, Formatter};
-
-use egui::{ComboBox, DragValue, Ui, WidgetText};
+use crate::app::MAX_PRECISION;
+use egui::{emath::Float, ComboBox, DragValue, Slider, Ui, WidgetText};
+use polars::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::{
+    fmt::{self, Display, Formatter},
+    hash::{Hash, Hasher},
+};
 use uom::si::{
     f32::Time,
     time::{millisecond, minute, second, Units},
 };
 
-use crate::app::MAX_PRECISION;
-
 /// Settings
-#[derive(Clone, Copy, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) struct Settings {
-    pub(crate) explode: bool,
-    pub(crate) filter_null: bool,
-    pub(crate) mass_to_charge: MassToCharge,
-    pub(crate) retention_time: RetentionTime,
-    pub(crate) sort: Sort,
-
-    pub(crate) normalize: bool,
-
     pub(crate) sticky_columns: usize,
     pub(crate) resizable: bool,
+    pub(crate) interpolation: Interpolation,
+    pub(crate) filter_onset_temperature: Option<i32>,
+    pub(crate) filter_temperature_step: Option<i32>,
+}
 
-    pub(crate) legend: bool,
-    pub(crate) visible: Option<bool>,
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            sticky_columns: 1,
+            resizable: false,
+            interpolation: Default::default(),
+            filter_onset_temperature: None,
+            filter_temperature_step: None,
+        }
+    }
+}
+
+/// Interpolation
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub(crate) struct Interpolation {
+    pub(crate) onset_temperature: f64,
+    pub(crate) temperature_step: f64,
+}
+
+impl Hash for Interpolation {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.onset_temperature.ord().hash(state);
+        self.temperature_step.ord().hash(state);
+    }
 }
 
 impl Settings {
-    pub(crate) fn ui(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ui.label("Retention time");
-            ComboBox::from_id_salt("retention_time_units")
-                .selected_text(self.retention_time.units.singular())
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.retention_time.units,
-                        TimeUnits::Millisecond,
-                        TimeUnits::Millisecond.singular(),
-                    )
-                    .on_hover_text(TimeUnits::Millisecond.abbreviation());
-                    ui.selectable_value(
-                        &mut self.retention_time.units,
-                        TimeUnits::Second,
-                        TimeUnits::Second.singular(),
-                    )
-                    .on_hover_text(TimeUnits::Second.abbreviation());
-                    ui.selectable_value(
-                        &mut self.retention_time.units,
-                        TimeUnits::Minute,
-                        TimeUnits::Minute.singular(),
-                    )
-                    .on_hover_text(TimeUnits::Minute.abbreviation());
-                })
-                .response
-                .on_hover_text(format!(
-                    "Units {}",
-                    self.retention_time.units.abbreviation(),
-                ));
-            ui.add(DragValue::new(&mut self.retention_time.precision).range(0..=MAX_PRECISION))
-                .on_hover_text("Precision");
-        });
-        ui.horizontal(|ui| {
-            ui.label("Mass to charge");
-            ui.add(DragValue::new(&mut self.mass_to_charge.precision).range(0..=MAX_PRECISION))
-                .on_hover_text("Precision");
-        });
+    pub(crate) fn ui(&mut self, ui: &mut Ui, data_frame: &DataFrame) {
+        ui.add(
+            Slider::new(&mut self.sticky_columns, 0..=data_frame.width()).text("Sticky columns"),
+        );
+        ui.checkbox(&mut self.resizable, "Resizable");
         ui.separator();
-        ui.horizontal(|ui| {
-            ui.label("Explode");
-            ui.checkbox(&mut self.explode, "")
-                .on_hover_text("Explode lists");
-        });
-        ui.horizontal(|ui| {
-            ui.label("Filter empty/null");
-            ui.checkbox(&mut self.filter_null, "")
-                .on_hover_text("Filter empty/null retention time");
-        });
-        ui.separator();
-        ui.horizontal(|ui| {
-            ui.label("Sort");
-            ComboBox::from_id_source("sort")
-                .selected_text(self.sort.text())
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.sort,
-                        Sort::RetentionTime,
-                        Sort::RetentionTime.text(),
-                    )
-                    .on_hover_text(Sort::RetentionTime.description());
-                    ui.selectable_value(
-                        &mut self.sort,
-                        Sort::MassToCharge,
-                        Sort::MassToCharge.text(),
-                    )
-                    .on_hover_text(Sort::MassToCharge.description());
-                })
-                .response
-                .on_hover_text(self.sort.description());
-        });
-        ui.separator();
-        ui.horizontal(|ui| {
-            ui.label("Normalize");
-            ui.checkbox(&mut self.normalize, "")
-                .on_hover_text("Normalize");
-        });
-        ui.separator();
-        ui.horizontal(|ui| {
-            ui.label("Legend");
-            ui.checkbox(&mut self.legend, "")
-                .on_hover_text("Show plot legend");
-        });
+        ui.label("Interpolation");
+        let (min, max) = data_frame["OnsetTemperature"]
+            .f64()
+            .unwrap()
+            .min_max()
+            .unwrap();
+        ui.add(Slider::new(
+            &mut self.interpolation.onset_temperature,
+            min..=max,
+        ));
+        let (min, max) = data_frame["TemperatureStep"]
+            .f64()
+            .unwrap()
+            .min_max()
+            .unwrap();
+        ui.add(Slider::new(
+            &mut self.interpolation.temperature_step,
+            min..=max,
+        ));
+        ui.label("Filter");
+        // ComboBox::from_id_salt("FilterOnsetTemperature")
+        //     // .selected_text(self.sort.text())
+        //     .show_ui(ui, |ui| {
+        //         ui.selectable_value(&mut self.filter_onset_temperature, None, "None");
+        //         let onset_temperature = data_frame["OnsetTemperature"]
+        //             .unique()
+        //             .unwrap()
+        //             .sort(Default::default())
+        //             .unwrap();
+        //         let onset_temperature = onset_temperature.f64().unwrap();
+        //         for selected_value in onset_temperature {
+        //             ui.selectable_value(
+        //                 &mut self.filter_onset_temperature,
+        //                 selected_value,
+        //                 format!("{selected_value:?}"),
+        //             )
+        //             .on_hover_text("Sort::RetentionTime.description()");
+        //         }
+        //     })
+        //     .response
+        //     .on_hover_text("self.sort.description()");
+        // ComboBox::from_id_salt("FilterTemperatureStep")
+        //     // .selected_text(self.sort.text())
+        //     .show_ui(ui, |ui| {
+        //         ui.selectable_value(&mut self.filter_temperature_step, None, "None");
+        //         let temperature_step = data_frame["TemperatureStep"]
+        //             .unique()
+        //             .unwrap()
+        //             .sort(Default::default())
+        //             .unwrap();
+        //         let temperature_step = temperature_step.f64().unwrap();
+        //         for selected_value in temperature_step {
+        //             ui.selectable_value(
+        //                 &mut self.filter_temperature_step,
+        //                 selected_value,
+        //                 format!("{selected_value:?}"),
+        //             )
+        //             .on_hover_text("Sort::RetentionTime.description()");
+        //         }
+        //     })
+        //     .response
+        //     .on_hover_text("self.sort.description()");
+
         // ui.horizontal(|ui| {
-        //     ui.selectable_value(&mut self.visible, Some(true), "◉👁");
-        //     ui.selectable_value(&mut self.visible, Some(false), "◎👁");
+        //     ui.label("Retention time");
+        //     ComboBox::from_id_salt("retention_time_units")
+        //         .selected_text(self.retention_time.units.singular())
+        //         .show_ui(ui, |ui| {
+        //             ui.selectable_value(
+        //                 &mut self.retention_time.units,
+        //                 TimeUnits::Millisecond,
+        //                 TimeUnits::Millisecond.singular(),
+        //             )
+        //             .on_hover_text(TimeUnits::Millisecond.abbreviation());
+        //             ui.selectable_value(
+        //                 &mut self.retention_time.units,
+        //                 TimeUnits::Second,
+        //                 TimeUnits::Second.singular(),
+        //             )
+        //             .on_hover_text(TimeUnits::Second.abbreviation());
+        //             ui.selectable_value(
+        //                 &mut self.retention_time.units,
+        //                 TimeUnits::Minute,
+        //                 TimeUnits::Minute.singular(),
+        //             )
+        //             .on_hover_text(TimeUnits::Minute.abbreviation());
+        //         })
+        //         .response
+        //         .on_hover_text(format!(
+        //             "Units {}",
+        //             self.retention_time.units.abbreviation(),
+        //         ));
+        //     ui.add(DragValue::new(&mut self.retention_time.precision).range(0..=MAX_PRECISION))
+        //         .on_hover_text("Precision");
         // });
+        // ui.horizontal(|ui| {
+        //     ui.label("Mass to charge");
+        //     ui.add(DragValue::new(&mut self.mass_to_charge.precision).range(0..=MAX_PRECISION))
+        //         .on_hover_text("Precision");
+        // });
+        // ui.separator();
+        // ui.horizontal(|ui| {
+        //     ui.label("Explode");
+        //     ui.checkbox(&mut self.explode, "")
+        //         .on_hover_text("Explode lists");
+        // });
+        // ui.horizontal(|ui| {
+        //     ui.label("Filter empty/null");
+        //     ui.checkbox(&mut self.filter_null, "")
+        //         .on_hover_text("Filter empty/null retention time");
+        // });
+        // ui.separator();
+        // ui.horizontal(|ui| {
+        //     ui.label("Sort");
+        //     ComboBox::from_id_source("sort")
+        //         .selected_text(self.sort.text())
+        //         .show_ui(ui, |ui| {
+        //             ui.selectable_value(
+        //                 &mut self.sort,
+        //                 Sort::RetentionTime,
+        //                 Sort::RetentionTime.text(),
+        //             )
+        //             .on_hover_text(Sort::RetentionTime.description());
+        //             ui.selectable_value(
+        //                 &mut self.sort,
+        //                 Sort::MassToCharge,
+        //                 Sort::MassToCharge.text(),
+        //             )
+        //             .on_hover_text(Sort::MassToCharge.description());
+        //         })
+        //         .response
+        //         .on_hover_text(self.sort.description());
+        // });
+        // ui.separator();
+        // ui.horizontal(|ui| {
+        //     ui.label("Normalize");
+        //     ui.checkbox(&mut self.normalize, "")
+        //         .on_hover_text("Normalize");
+        // });
+        // ui.separator();
+        // ui.horizontal(|ui| {
+        //     ui.label("Legend");
+        //     ui.checkbox(&mut self.legend, "")
+        //         .on_hover_text("Show plot legend");
+        // });
+        // // ui.horizontal(|ui| {
+        // //     ui.selectable_value(&mut self.visible, Some(true), "◉👁");
+        // //     ui.selectable_value(&mut self.visible, Some(false), "◎👁");
+        // // });
     }
 }
 

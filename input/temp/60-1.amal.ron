@@ -686,8 +686,8 @@
             ],
         },
         {
-            "name": "Temperature",
-            "datatype": Int32,
+            "name": "OnsetTemperature",
+            "datatype": Float64,
             "bit_settings": "",
             "values": [
                 60,
@@ -729,8 +729,8 @@
             ],
         },
         {
-            "name": "DeltaTemperature",
-            "datatype": Int32,
+            "name": "TemperatureStep",
+            "datatype": Float64,
             "bit_settings": "",
             "values": [
                 1,

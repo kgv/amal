@@ -1,5 +1,6 @@
 use anyhow::Result;
 use polars::prelude::*;
+use ron::{extensions::Extensions, ser::PrettyConfig};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display, Formatter},
@@ -16,14 +17,17 @@ impl Data {
     pub(crate) fn save(&self, path: impl AsRef<Path>, format: Format) -> Result<()> {
         let data_frame =
             self.data_frame
-                .select(["FA", "Temperature", "DeltaTemperature", "Time"])?;
+                .select(["FA", "OnsetTemperature", "TemperatureStep", "Time"])?;
         match format {
             Format::Bin => {
                 let contents = bincode::serialize(&data_frame)?;
                 write(path, contents)?;
             }
             Format::Ron => {
-                let contents = ron::ser::to_string_pretty(&data_frame, Default::default())?;
+                let contents = ron::ser::to_string_pretty(
+                    &data_frame,
+                    PrettyConfig::default().extensions(Extensions::IMPLICIT_SOME),
+                )?;
                 write(path, contents)?;
             }
         }
@@ -49,8 +53,8 @@ impl Data {
                     col("Indices"),
                     col("Bounds"),
                     col("Label"),
-                    col("Temperature"),
-                    col("DeltaTemperature"),
+                    col("OnsetTemperature"),
+                    col("TemperatureStep"),
                     col("Time"),
                 ],
                 [
@@ -58,8 +62,8 @@ impl Data {
                     col("Indices"),
                     col("Bounds"),
                     col("Label"),
-                    col("Temperature"),
-                    col("DeltaTemperature"),
+                    col("OnsetTemperature"),
+                    col("TemperatureStep"),
                     col("Time"),
                 ],
                 JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
@@ -72,8 +76,8 @@ impl Data {
                     col("Label"),
                 ])
                 .alias("FA"),
-                col("Temperature"),
-                col("DeltaTemperature"),
+                col("OnsetTemperature"),
+                col("TemperatureStep"),
                 col("Time"),
             ])
             .collect()?;
@@ -101,8 +105,8 @@ impl Default for Data {
                         Field::new("Label".into(), DataType::String),
                     ]),
                 ),
-                Field::new("Temperature".into(), DataType::Int32),
-                Field::new("DeltaTemperature".into(), DataType::Int32),
+                Field::new("OnsetTemperature".into(), DataType::Float64),
+                Field::new("TemperatureStep".into(), DataType::Float64),
                 Field::new("Time".into(), DataType::List(Box::new(DataType::Float64))),
             ])),
         }

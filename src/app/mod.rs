@@ -69,6 +69,7 @@ impl App {
         add_to_fonts(&mut fonts, Variant::Regular);
         cc.egui_ctx.set_fonts(fonts);
 
+        // return Default::default();
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         cc.storage
@@ -114,10 +115,10 @@ impl App {
                     Ok(data_frame) => {
                         trace!(?data_frame);
                         self.data.stack(&data_frame).unwrap();
-                        self.tree.insert_pane(Pane::Table(TablePane {
-                            data_frame: self.data.data_frame.clone(),
-                            ..Default::default()
-                        }));
+                        self.tree.insert_pane(Pane::Table(TablePane::new(
+                            self.data.data_frame.clone(),
+                            Default::default(),
+                        )));
                         trace!(?self.data);
                     }
                     Err(error) => {

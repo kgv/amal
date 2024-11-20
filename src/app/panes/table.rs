@@ -1,38 +1,61 @@
-// use crate::app::{text::Text, widgets::FloatValue, MARGIN};
 use super::Settings;
-use egui::{vec2, Frame, Grid, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
+use crate::{
+    app::computers::{TableComputed, TableKey},
+    special::fa_column::ColumnExt as _,
+};
+use egui::{vec2, Context, Frame, Grid, Id, Margin, RichText, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
+use itertools::Itertools;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
+
+const INDEX: usize = 0;
+const MODE: usize = 1;
+const FA: usize = 2;
+const TIME: usize = 3;
+const ECL: usize = 4;
+const ECN: usize = 5;
+const MASS: usize = 6;
 
 const MARGIN: Vec2 = vec2(4.0, 0.0);
 
 /// Composition table
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub(in crate::app) struct TablePane {
-    pub(in crate::app) data_frame: DataFrame,
+    pub(in crate::app) source: DataFrame,
+    pub(in crate::app) target: DataFrame,
     pub(in crate::app) settings: Settings,
 }
 
 impl TablePane {
     pub(in crate::app) fn new(data_frame: DataFrame, settings: Settings) -> Self {
         Self {
-            data_frame,
+            source: data_frame,
+            target: Default::default(),
             settings,
         }
     }
 
     pub(super) fn ui(&mut self, ui: &mut Ui) {
-        let id_salt = Id::new("CompositionTable");
+        ui.visuals_mut().collapsing_header_frame = true;
+        ui.collapsing(RichText::new("Settings").heading(), |ui| {
+            self.settings.ui(ui, &self.source);
+        });
+        self.target = ui.memory_mut(|memory| {
+            memory.caches.cache::<TableComputed>().get(TableKey {
+                data_frame: &self.source,
+                settings: &self.settings,
+            })
+        });
+        let id_salt = Id::new("Table");
         let height = ui.text_style_height(&TextStyle::Heading);
-        let num_rows = self.data_frame.height() as _;
-        let num_columns = self.data_frame.width();
+        let num_rows = self.target.height() as _;
+        let num_columns = self.target.width();
         Table::new()
             .id_salt(id_salt)
             .num_rows(num_rows)
             .columns(vec![
-                Column::default().resizable(true);
-                // Column::default().resizable(self.settings.resizable);
+                Column::default().resizable(self.settings.resizable);
                 num_columns
             ])
             .num_sticky_cols(self.settings.sticky_columns)
@@ -44,43 +67,101 @@ impl TablePane {
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: usize) {
         ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         match (row, column) {
-            (0, 0) => {
+            (0, INDEX) => {
+                ui.heading("Index");
+            }
+            (0, MODE) => {
+                ui.heading("Mode");
+            }
+            (0, FA) => {
                 ui.heading("FA");
             }
-            (0, 1) => {
-                ui.heading("Temperature");
-            }
-            (0, 2) => {
-                ui.heading("DeltaTemperature");
-            }
-            (0, 3) => {
+            (0, TIME) => {
                 ui.heading("Time");
             }
-            _ => unreachable!(),
+            (0, ECL) => {
+                ui.heading("ECL");
+            }
+            (0, ECN) => {
+                ui.heading("ECN");
+            }
+            (0, MASS) => {
+                ui.heading("Mass");
+            }
+            _ => {} // _ => unreachable!(),
         }
     }
 
     fn body_cell_content_ui(&mut self, ui: &mut Ui, row: usize, col: usize) {
         match (row, col) {
-            (row, 0) => {
-                let series = self.data_frame["FA"]
-                    .struct_()
-                    .unwrap()
-                    .field_by_name("Label")
-                    .unwrap();
-                let values = series.str().unwrap();
-                let value = values.get(row).unwrap();
-                ui.label(value);
+            (row, INDEX) => {
+                let indices = self.target["Index"].u32().unwrap();
+                let value = indices.get(row).unwrap();
+                ui.label(value.to_string());
+            }
+            (row, MODE) => {
+                let mode = self.target["Mode"].struct_().unwrap();
+                let onset_temperature = mode.field_by_name("OnsetTemperature").unwrap();
+                let temperature_step = mode.field_by_name("TemperatureStep").unwrap();
+                ui.label(format!(
+                    "{}/{}",
+                    onset_temperature.str_value(row).unwrap(),
+                    temperature_step.str_value(row).unwrap()
+                ));
+            }
+            (row, FA) => {
+                let fatty_acids = self.target["FA"].fa();
+                let fatty_acid = fatty_acids.get(row).unwrap();
+                ui.label(fatty_acid.to_string())
+                    .on_hover_text(fatty_acid.label());
+            }
+            (row, MASS) => {
+                let mass = self.target["Mass"].struct_().unwrap();
+                let rcooch3 = mass.field_by_name("RCOOCH3").unwrap();
+                ui.label(rcooch3.str_value(row).unwrap()).on_hover_ui(|ui| {
+                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
+                        ui.label("RCOOCH3");
+                        ui.label(rcooch3.str_value(row).unwrap());
+                        ui.end_row();
+                        {
+                            ui.label("RCOOH");
+                            let rcooh = mass.field_by_name("RCOOH").unwrap();
+                            ui.label(rcooh.str_value(row).unwrap());
+                        }
+                        ui.end_row();
+                        {
+                            ui.label("RCOO");
+                            let rcoo = mass.field_by_name("RCOO").unwrap();
+                            ui.label(rcoo.str_value(row).unwrap());
+                        }
+                    });
+                });
+            }
+            (row, TIME) => {
+                let time = self.target["Time"].struct_().unwrap();
+                let means = time.field_by_name("Mean").unwrap();
+                ui.label(means.str_value(row).unwrap()).on_hover_ui(|ui| {
+                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
+                        // Absolute
+                        ui.label("Absolute");
+                        ui.horizontal(|ui| {
+                            ui.label(means.str_value(row).unwrap());
+                            ui.label("±");
+                            let standard_deviations =
+                                time.field_by_name("StandardDeviation").unwrap();
+                            ui.label(standard_deviations.str_value(row).unwrap());
+                        });
+                        ui.end_row();
+                        // Relative
+                        let relatives = time.field_by_name("Relative").unwrap();
+                        ui.label("Relative");
+                        ui.label(relatives.str_value(row).unwrap());
+                    });
+                });
             }
             (row, column) => {
-                let value = self.data_frame[column].get(row).unwrap();
+                let value = self.target[column].get(row).unwrap();
                 ui.label(value.to_string());
-                // ui.add(Cell {
-                //     row,
-                //     column: &self.data_frame[column],
-                //     percent: settings.percent,
-                //     precision: settings.precision,
-                // });
             }
         }
     }

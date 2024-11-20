@@ -36,7 +36,7 @@ impl Pane {
     pub(crate) const fn data_frame(&self) -> &DataFrame {
         match self {
             Self::Plot(plot) => &plot.data_frame,
-            Self::Table(table) => &table.data_frame,
+            Self::Table(table) => &table.target,
         }
     }
 }
@@ -49,12 +49,12 @@ impl Pane {
         }
     }
 
-    pub(crate) fn settings(&mut self, ui: &mut Ui) {
-        match self {
-            Self::Plot(plot) => plot.settings.ui(ui),
-            Self::Table(table) => table.settings.ui(ui),
-        }
-    }
+    // pub(crate) fn settings(&mut self, ui: &mut Ui) {
+    //     match self {
+    //         Self::Plot(plot) => plot.settings.ui(ui),
+    //         Self::Table(table) => table.settings.ui(ui),
+    //     }
+    // }
 }
 
 pub(crate) mod behavior;

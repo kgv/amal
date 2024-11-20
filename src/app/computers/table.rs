@@ -1,8 +1,14 @@
-use crate::app::panes::settings::{Settings, Sort};
-use egui::util::cache::{ComputerMut, FrameCache};
+use crate::{
+    app::panes::settings::{Settings, Sort},
+    special::polars::{ExprExt as _, Mass as _, Rcooh},
+};
+use egui::{
+    emath::Float,
+    util::cache::{ComputerMut, FrameCache},
+};
 use polars::{frame::DataFrame, prelude::*};
 use std::hash::{Hash, Hasher};
-use tracing::{error, trace, warn};
+use tracing::error;
 
 /// Filter computed
 pub(crate) type Computed = FrameCache<DataFrame, Computer>;
@@ -11,155 +17,86 @@ pub(crate) type Computed = FrameCache<DataFrame, Computer>;
 #[derive(Default)]
 pub(crate) struct Computer;
 
-// fn signal() -> Expr {
-//     col("").struct_().field_by_name("Signal")
-// }
-
 impl ComputerMut<Key<'_>, DataFrame> for Computer {
     fn compute(&mut self, key: Key<'_>) -> DataFrame {
         let mut data_frame = key.data_frame.clone();
         error!(?data_frame);
-        // {
-        //     let data_frame = data_frame
-        //         .clone()
-        //         .lazy()
-        //         .select([
-        //             col("RetentionTime"),
-        //             col("Masspectrum").alias("MassSpectrum"),
-        //         ])
-        //         // .explode(["Masspectrum"])
-        //         // .unnest(["Masspectrum"])
-        //         //     .sort(["MassToCharge"], Default::default())
-        //         //     .group_by([col("RetentionTime")])
-        //         //     .agg([as_struct(vec![
-        //         //         col("MassToCharge").drop_nulls(),
-        //         //         col("Signal").drop_nulls(),
-        //         //     ])
-        //         //     .alias("MassSpectrum")])
-        //         .collect()
-        //         .unwrap();
-        //     let contents = bincode::serialize(&data_frame).unwrap();
-        //     std::fs::write("df.msv.bin", &contents).unwrap();
-        //     // // let contents = ron::ser::to_string_pretty(&data_frame, Default::default()).unwrap();
-        //     // // std::fs::write("df.msv.ron", &contents).unwrap();
-        //     error!(?data_frame);
+        let mut lazy_frame = data_frame.clone().lazy().select([
+            as_struct(vec![
+                col("OnsetTemperature").alias("OnsetTemperature"),
+                col("TemperatureStep").alias("TemperatureStep"),
+            ])
+            .alias("Mode"),
+            col("FA"),
+            as_struct(vec![
+                col("Time").list().mean().alias("Mean"),
+                col("Time").list().std(0).alias("StandardDeviation"),
+                col("Time").alias("Values"),
+            ])
+            .alias("Time"),
+        ]);
+        println!("1: {}", lazy_frame.clone().collect().unwrap());
+        lazy_frame = concat(
+            [
+                lazy_frame,
+                df! {
+                    "Mode" => df! {
+                        "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
+                        "TemperatureStep" => [key.settings.interpolation.temperature_step],
+                    }.unwrap().into_struct(PlSmallStr::EMPTY),
+                }
+                .unwrap()
+                .lazy(),
+            ],
+            UnionArgs::default(),
+        )
+        .unwrap();
+        println!("2: {}", lazy_frame.clone().collect().unwrap());
+        // lazy_frame = lazy_frame.join(
+        //     df! {
+        //         "Mode" => df! {
+        //             "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
+        //             "TemperatureStep" => [key.settings.interpolation.temperature_step],
+        //         }.unwrap().into_struct(PlSmallStr::EMPTY),
+        //     }
+        //     .unwrap()
+        //     .lazy(),
+        //     [
+        //         col("Mode").struct_().field_by_name("OnsetTemperature"),
+        //         col("Mode").struct_().field_by_name("TemperatureStep"),
+        //     ],
+        //     [
+        //         col("Mode").struct_().field_by_name("OnsetTemperature"),
+        //         col("Mode").struct_().field_by_name("TemperatureStep"),
+        //     ],
+        //     JoinArgs::new(JoinType::Left),
+        // );
+        // lazy_frame.with_collapse_joins(toggle)
+        error!(?data_frame);
+        lazy_frame = lazy_frame.with_columns([
+            col("Time")
+                .struct_()
+                .with_fields(vec![relative_time().over(["Mode"]).alias("Relative")])
+                .unwrap(),
+            ecl().over(["Mode"]).alias("ECL"),
+            col("FA").fa().ecn().alias("ECN"),
+            as_struct(vec![
+                col("FA").fa().mass().alias("RCOOH"),
+                col("FA").fa().rcoo().mass().alias("RCOO"),
+                col("FA").fa().rcooch3().mass().alias("RCOOCH3"),
+            ])
+            .alias("Mass"),
+        ]);
+        // if let Some(temperature_step) = key.settings.filter_temperature_step {
+        //     lazy_frame = lazy_frame.filter(
+        //         col("Mode")
+        //             .struct_()
+        //             .field_by_name("TemperatureStep")
+        //             .eq(lit(temperature_step)),
+        //     );
         // }
-        let mut lazy_frame = data_frame.lazy();
-        if key.settings.filter_null {
-            lazy_frame = lazy_frame.filter(col("MassSpectrum").list().len().neq(lit(0)));
-        }
-        if key.settings.normalize {
-            lazy_frame = lazy_frame
-                .explode(["MassSpectrum"])
-                .unnest(["MassSpectrum"])
-                .with_column(col("Signal").cast(DataType::Float32) / max("Signal"))
-                .group_by([col("RetentionTime")])
-                .agg([as_struct(vec![col("MassToCharge"), col("Signal")]).alias("MassSpectrum")]);
-        }
-        match key.settings.sort {
-            Sort::RetentionTime if key.settings.explode => {
-                lazy_frame = lazy_frame
-                    .explode(["MassSpectrum"])
-                    .unnest(["MassSpectrum"])
-                    .sort_by_exprs([col("RetentionTime")], Default::default());
-            }
-            Sort::RetentionTime => {
-                lazy_frame = lazy_frame
-                    .with_columns([
-                        col("MassSpectrum").list().len().name().suffix(".Count"),
-                        col("MassSpectrum")
-                            .list()
-                            .eval(col("").struct_().field_by_name("MassToCharge"), true)
-                            .list()
-                            .min()
-                            .alias("MassToCharge.Min"),
-                        col("MassSpectrum")
-                            .list()
-                            .eval(col("").struct_().field_by_name("MassToCharge"), true)
-                            .list()
-                            .max()
-                            .alias("MassToCharge.Max"),
-                        col("MassSpectrum")
-                            .list()
-                            .eval(col("").struct_().field_by_name("Signal"), true)
-                            .list()
-                            .min()
-                            .alias("Signal.Min"),
-                        col("MassSpectrum")
-                            .list()
-                            .eval(col("").struct_().field_by_name("Signal"), true)
-                            .list()
-                            .max()
-                            .alias("Signal.Max"),
-                        col("MassSpectrum")
-                            .list()
-                            .eval(col("").struct_().field_by_name("Signal"), true)
-                            .list()
-                            .sum()
-                            .alias("Signal.Sum"),
-                    ])
-                    .sort_by_exprs([col("RetentionTime")], Default::default());
-            }
-            Sort::MassToCharge if key.settings.explode => {
-                lazy_frame = lazy_frame
-                    .explode(["MassSpectrum"])
-                    .unnest(["MassSpectrum"])
-                    .sort_by_exprs([col("MassToCharge")], Default::default());
-            }
-            Sort::MassToCharge => {
-                trace!(lazy_data_frame =? lazy_frame.clone().collect());
-                lazy_frame = lazy_frame
-                    .explode(["MassSpectrum"])
-                    .unnest(["MassSpectrum"])
-                    .sort_by_exprs([col("RetentionTime")], Default::default())
-                    .group_by([col("MassToCharge").round(0)])
-                    .agg([as_struct(vec![
-                        col("RetentionTime").drop_nulls(),
-                        col("Signal").drop_nulls(),
-                    ])
-                    .alias("ExtractedIonChromatogram")])
-                    .sort_by_exprs([col("MassToCharge")], Default::default())
-                    .with_columns([
-                        col("ExtractedIonChromatogram")
-                            .list()
-                            .len()
-                            .name()
-                            .suffix(".Count"),
-                        col("ExtractedIonChromatogram")
-                            .list()
-                            .eval(col("").struct_().field_by_name("RetentionTime"), true)
-                            .list()
-                            .min()
-                            .alias("RetentionTime.Min"),
-                        col("ExtractedIonChromatogram")
-                            .list()
-                            .eval(col("").struct_().field_by_name("RetentionTime"), true)
-                            .list()
-                            .max()
-                            .alias("RetentionTime.Max"),
-                        col("ExtractedIonChromatogram")
-                            .list()
-                            .eval(col("").struct_().field_by_name("Signal"), true)
-                            .list()
-                            .min()
-                            .alias("Signal.Min"),
-                        col("ExtractedIonChromatogram")
-                            .list()
-                            .eval(col("").struct_().field_by_name("Signal"), true)
-                            .list()
-                            .max()
-                            .alias("Signal.Max"),
-                        col("ExtractedIonChromatogram")
-                            .list()
-                            .eval(col("").struct_().field_by_name("Signal"), true)
-                            .list()
-                            .sum()
-                            .alias("Signal.Sum"),
-                    ]);
-            }
-        };
-        data_frame = lazy_frame.collect().unwrap();
-        trace!(?data_frame);
+        data_frame = lazy_frame.with_row_index("Index", None).collect().unwrap();
+        error!(?data_frame);
         data_frame
     }
 }
@@ -173,7 +110,73 @@ pub struct Key<'a> {
 
 impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        // self.context.state.index.hash(state);
+        // for value in self.data_frame["FA"].phys_iter() {
+        //     value.hash(state);
+        // }
+        for value in self.data_frame["OnsetTemperature"].f64().unwrap() {
+            value.map(|value| value.ord()).hash(state);
+        }
+        for value in self.data_frame["TemperatureStep"].f64().unwrap() {
+            value.map(|value| value.ord()).hash(state);
+        }
+        // for value in self.data_frame["Time"].vec_hash() {
+        //     value.hash(state);
+        // }
+        // for series in self.data_frame.iter() {
+        //     for value in series.iter() {
+        //         value.hash(state);
+        //     }
+        // }
         self.settings.hash(state);
     }
+}
+
+fn relative_time() -> Expr {
+    col("Time").struct_().field_by_name("Mean")
+        / col("Time")
+            .struct_()
+            .field_by_name("Mean")
+            .filter(
+                col("FA")
+                    .fa()
+                    .saturated()
+                    .and(col("FA").fa().c().eq(lit(18))),
+            )
+            .first()
+}
+
+// fn ecl(fa: Expr, time: Expr) -> Expr {
+//     as_struct(vec![fa, time]).apply(
+//         |column| {
+//             let chunked_array = column.struct_()?.field_by_name("FA")?;
+//             let times = column.struct_()?.field_by_name("Time")?;
+//             let chunked_array = column.f64()?;
+//             let time = times.f64()?;
+//             time.shift(1);
+//             Ok(Some(Column::Series(
+//                 chunked_array
+//                     .into_iter()
+//                     .map(|option| Some(option.unwrap_or_default() / chunked_array.sum()?))
+//                     .collect(),
+//             )))
+//         },
+//         GetOutput::same_type(),
+//     )
+// }
+fn ecl() -> Expr {
+    ternary_expr(
+        col("FA").fa().saturated(),
+        col("FA").fa().c(),
+        ternary_expr(col("FA").fa().saturated(), col("FA").fa().c(), lit(NULL)).forward_fill(None)
+            + (col("Time").struct_().field_by_name("Mean") - time().forward_fill(None))
+                / (time().backward_fill(None) - time().forward_fill(None)),
+    )
+}
+
+fn time() -> Expr {
+    ternary_expr(
+        col("FA").fa().saturated(),
+        col("Time").struct_().field_by_name("Mean"),
+        lit(NULL),
+    )
 }

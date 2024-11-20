@@ -19,12 +19,12 @@ use polars::prelude::*;
 
 /// Extension methods for [`Expr`]
 pub trait ExprExt {
-    fn fa(self) -> FattyAcid;
+    fn fa(self) -> Rcooh;
 }
 
 impl ExprExt for Expr {
-    fn fa(self) -> FattyAcid {
-        FattyAcid(self)
+    fn fa(self) -> Rcooh {
+        Rcooh(self)
     }
 }
 
@@ -43,19 +43,20 @@ pub trait Mass {
 
 /// Fatty acids [`Expr`]
 #[derive(Clone)]
-pub struct FattyAcid(Expr);
+pub struct Rcooh(Expr);
 
-impl FattyAcid {
+impl Rcooh {
     pub fn rcoo(self) -> Rcoo {
         Rcoo(self)
     }
 
-    pub fn methyl_ester(self) -> MethylEster {
-        MethylEster(self)
+    /// Methyl ester
+    pub fn rcooch3(self) -> Rcooch3 {
+        Rcooch3(self)
     }
 }
 
-impl FattyAcid {
+impl Rcooh {
     /// Bounds count
     pub fn b(&self) -> Expr {
         self.0
@@ -97,7 +98,7 @@ impl FattyAcid {
     }
 }
 
-impl Mass for FattyAcid {
+impl Mass for Rcooh {
     fn c(&self) -> Expr {
         self.0.clone().struct_().field_by_name("Carbons")
     }
@@ -107,17 +108,17 @@ impl Mass for FattyAcid {
     }
 }
 
-impl From<FattyAcid> for Expr {
-    fn from(value: FattyAcid) -> Self {
+impl From<Rcooh> for Expr {
+    fn from(value: Rcooh) -> Self {
         value.0
     }
 }
 
 /// Fatty acid methyl ester [`Expr`]
 #[derive(Clone)]
-pub struct MethylEster(FattyAcid);
+pub struct Rcooch3(Rcooh);
 
-impl Mass for MethylEster {
+impl Mass for Rcooch3 {
     fn c(&self) -> Expr {
         self.0.c() + lit(1)
     }
@@ -129,7 +130,7 @@ impl Mass for MethylEster {
 
 /// Fatty acid RCOO- [`Expr`]
 #[derive(Clone)]
-pub struct Rcoo(FattyAcid);
+pub struct Rcoo(Rcooh);
 
 impl Mass for Rcoo {
     fn c(&self) -> Expr {
