@@ -20,6 +20,9 @@ pub(crate) struct Settings {
 
     pub(crate) normalize: bool,
 
+    pub(crate) sticky_columns: usize,
+    pub(crate) resizable: bool,
+
     pub(crate) legend: bool,
     pub(crate) visible: Option<bool>,
 }
@@ -28,7 +31,7 @@ impl Settings {
     pub(crate) fn ui(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             ui.label("Retention time");
-            ComboBox::from_id_source("retention_time_units")
+            ComboBox::from_id_salt("retention_time_units")
                 .selected_text(self.retention_time.units.singular())
                 .show_ui(ui, |ui| {
                     ui.selectable_value(

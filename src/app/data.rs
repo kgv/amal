@@ -14,7 +14,9 @@ pub(crate) struct Data {
 
 impl Data {
     pub(crate) fn save(&self, path: impl AsRef<Path>, format: Format) -> Result<()> {
-        let data_frame = self.data_frame.select(["RetentionTime", "Masspectrum"])?;
+        let data_frame =
+            self.data_frame
+                .select(["FA", "Temperature", "DeltaTemperature", "Time"])?;
         match format {
             Format::Bin => {
                 let contents = bincode::serialize(&data_frame)?;
@@ -28,14 +30,54 @@ impl Data {
         Ok(())
     }
 
-    pub(crate) fn load(&mut self, data_frame: &DataFrame) -> Result<()> {
-        println!("self.data_frame: {}", self.data_frame);
-        println!("data_frame: {}", data_frame);
-        self.data_frame.unnest(["FA"])?.full_join(
-            &data_frame.unnest(["FA"])?,
-            ["Carbons", "Bounds"],
-            ["Carbons", "Bounds"],
-        )?;
+    pub(crate) fn stack(&mut self, data_frame: &DataFrame) -> Result<()> {
+        // If many vstack operations are done, it is recommended to call DataFrame::align_chunks_par
+        self.data_frame.vstack_mut(&data_frame)?.align_chunks_par();
+        Ok(())
+    }
+
+    pub(crate) fn join(&mut self, data_frame: DataFrame) -> Result<()> {
+        self.data_frame = self
+            .data_frame
+            .clone()
+            .lazy()
+            .unnest(["FA"])
+            .join(
+                data_frame.lazy().unnest(["FA"]),
+                [
+                    col("Carbons"),
+                    col("Indices"),
+                    col("Bounds"),
+                    col("Label"),
+                    col("Temperature"),
+                    col("DeltaTemperature"),
+                    col("Time"),
+                ],
+                [
+                    col("Carbons"),
+                    col("Indices"),
+                    col("Bounds"),
+                    col("Label"),
+                    col("Temperature"),
+                    col("DeltaTemperature"),
+                    col("Time"),
+                ],
+                JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
+            )
+            .select([
+                as_struct(vec![
+                    col("Carbons"),
+                    col("Indices"),
+                    col("Bounds"),
+                    col("Label"),
+                ])
+                .alias("FA"),
+                col("Temperature"),
+                col("DeltaTemperature"),
+                col("Time"),
+            ])
+            .collect()?;
+        // println!("self.data_frame: {}", self.data_frame);
         Ok(())
     }
 }
@@ -49,20 +91,20 @@ impl Display for Data {
 impl Default for Data {
     fn default() -> Self {
         Self {
-            data_frame: DataFrame::empty_with_schema(&Schema::from_iter([Field::new(
-                "FA".into(),
-                DataType::Struct(vec![
-                    Field::new("Carbons".into(), DataType::UInt8),
-                    Field::new(
-                        "Bounds".into(),
-                        DataType::List(Box::new(DataType::Struct(vec![
-                            Field::new("Index".into(), DataType::Int8),
-                            Field::new("Multiplicity".into(), DataType::UInt8),
-                        ]))),
-                    ),
-                    Field::new("Label".into(), DataType::String),
-                ]),
-            )])),
+            data_frame: DataFrame::empty_with_schema(&Schema::from_iter([
+                Field::new(
+                    "FA".into(),
+                    DataType::Struct(vec![
+                        Field::new("Carbons".into(), DataType::UInt8),
+                        Field::new("Indices".into(), DataType::List(Box::new(DataType::UInt8))),
+                        Field::new("Bounds".into(), DataType::List(Box::new(DataType::Int8))),
+                        Field::new("Label".into(), DataType::String),
+                    ]),
+                ),
+                Field::new("Temperature".into(), DataType::Int32),
+                Field::new("DeltaTemperature".into(), DataType::Int32),
+                Field::new("Time".into(), DataType::List(Box::new(DataType::Float64))),
+            ])),
         }
     }
 }

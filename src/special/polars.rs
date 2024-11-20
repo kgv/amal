@@ -3,19 +3,19 @@ use std::sync::LazyLock;
 use crate::r#const::relative_atomic_mass::{C, H, O};
 use polars::prelude::*;
 
-pub static FATTY_ACIDS_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
-    Schema::from_iter([
-        Field::new("Carbons".into(), DataType::UInt8),
-        Field::new(
-            "Bounds".into(),
-            DataType::List(Box::new(DataType::Struct(vec![
-                Field::new("Index".into(), DataType::Int8),
-                Field::new("Multiplicity".into(), DataType::UInt8),
-            ]))),
-        ),
-        Field::new("Label".into(), DataType::String),
-    ])
-});
+// pub static FATTY_ACIDS_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
+//     Schema::from_iter([
+//         Field::new("Carbons".into(), DataType::UInt8),
+//         Field::new(
+//             "Bounds".into(),
+//             DataType::List(Box::new(DataType::Struct(vec![
+//                 Field::new("Index".into(), DataType::Int8),
+//                 Field::new("Multiplicity".into(), DataType::UInt8),
+//             ]))),
+//         ),
+//         Field::new("Label".into(), DataType::String),
+//     ])
+// });
 
 /// Extension methods for [`Expr`]
 pub trait ExprExt {
@@ -74,12 +74,7 @@ impl FattyAcid {
     }
 
     pub fn indices(&self) -> Expr {
-        self.0
-            .clone()
-            .struct_()
-            .field_by_name("Bounds")
-            .list()
-            .eval(col("").struct_().field_by_name("Index"), true)
+        self.0.clone().struct_().field_by_name("Indices")
     }
 
     pub fn saturated(&self) -> Expr {
@@ -96,10 +91,7 @@ impl FattyAcid {
             .struct_()
             .field_by_name("Bounds")
             .list()
-            .eval(
-                col("").struct_().field_by_name("Multiplicity") - lit(1),
-                true,
-            )
+            .eval(col("") - lit(1), true)
             .list()
             .sum()
     }

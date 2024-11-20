@@ -1,5 +1,5 @@
-use self::panes::{behavior::Behavior, Pane};
-use crate::{special::polars::FATTY_ACIDS_SCHEMA, utils::TreeExt};
+use self::panes::{behavior::Behavior, table::TablePane, Pane};
+use crate::utils::TreeExt;
 use anyhow::Result;
 use data::{Data, Format};
 use eframe::{get_value, set_value, APP_KEY};
@@ -18,7 +18,6 @@ use egui_phosphor::{
     Variant,
 };
 use egui_tiles::{ContainerKind, Tile, Tree};
-use panes::table::TablePane;
 use polars::{df, frame::DataFrame, prelude::DataFrameJoinOps};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Write, str, time::Duration};
@@ -114,11 +113,11 @@ impl App {
                 match ron(&dropped_file) {
                     Ok(data_frame) => {
                         trace!(?data_frame);
-                        self.data.load(&data_frame).unwrap();
-                        // self.tree.insert_pane(Pane::Table(TablePane {
-                        //     data_frame,
-                        //     settings: Default::default(),
-                        // }));
+                        self.data.stack(&data_frame).unwrap();
+                        self.tree.insert_pane(Pane::Table(TablePane {
+                            data_frame: self.data.data_frame.clone(),
+                            ..Default::default()
+                        }));
                         trace!(?self.data);
                     }
                     Err(error) => {
@@ -171,7 +170,7 @@ impl App {
             .resizable(true)
             .show_animated(ctx, self.left_panel, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
-                    self.behavior.settings(ui, &mut self.tree);
+                    // self.behavior.settings(ui, &mut self.tree);
                     ui.separator();
                 });
             });

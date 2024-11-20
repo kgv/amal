@@ -1,247 +1,109 @@
-use super::{
-    settings::{Settings, Sort, TimeUnits},
-    widgets::{eic::ExtractedIonChromatogram, mass_spectrum::MassSpectrum},
-};
-use crate::app::computers::{TableComputed, TableKey};
-use egui::{Direction, Layout, Ui};
-use egui_ext::TableRowExt;
-use egui_extras::{Column, TableBuilder};
+// use crate::app::{text::Text, widgets::FloatValue, MARGIN};
+use super::Settings;
+use egui::{vec2, Frame, Grid, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
+use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-use tracing::error;
-use uom::si::{
-    f32::Time,
-    time::{millisecond, minute, second},
-};
 
-const COLUMN_COUNT: usize = 3;
+const MARGIN: Vec2 = vec2(4.0, 0.0);
 
-/// Table pane
+/// Composition table
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub(crate) struct TablePane {
-    pub(crate) data_frame: DataFrame,
-    pub(crate) settings: Settings,
+pub(in crate::app) struct TablePane {
+    pub(in crate::app) data_frame: DataFrame,
+    pub(in crate::app) settings: Settings,
 }
 
 impl TablePane {
-    pub(super) fn ui(&self, ui: &mut Ui) {
-        if let Err(error) = match self.settings.sort {
-            Sort::RetentionTime if !self.settings.explode => self.grouped_by_retention_time(ui),
-            Sort::MassToCharge if !self.settings.explode => self.grouped_by_mass_to_charge(ui),
-            _ => self.exploded(ui),
-        } {
-            error!(%error);
-            ui.label(error.to_string());
+    pub(in crate::app) fn new(data_frame: DataFrame, settings: Settings) -> Self {
+        Self {
+            data_frame,
+            settings,
         }
     }
 
-    fn grouped_by_mass_to_charge(&self, ui: &mut Ui) -> PolarsResult<()> {
-        let width = ui.spacing().interact_size.x;
-        let height = ui.spacing().interact_size.y;
-        let data_frame = ui.memory_mut(|memory| {
-            memory.caches.cache::<TableComputed>().get(TableKey {
-                data_frame: &self.data_frame,
-                settings: &self.settings,
-            })
-        });
-        let total_rows = data_frame.height();
-        // let mass_to_charge = .cast(&DataType::UInt32)?;
-        let mass_to_charge = data_frame["MassToCharge"].f32()?;
-        TableBuilder::new(ui)
-            .cell_layout(Layout::centered_and_justified(Direction::LeftToRight))
-            .column(Column::auto_with_initial_suggestion(width))
-            .columns(Column::auto(), COLUMN_COUNT - 1)
-            .auto_shrink(false)
-            .striped(true)
-            .header(height, |mut row| {
-                row.col(|ui| {
-                    ui.heading("Index");
-                });
-                row.col(|ui| {
-                    ui.heading("Mass to charge");
-                });
-                row.col(|ui| {
-                    ui.heading("Extracted ion chromatogram");
-                });
-            })
-            .body(|body| {
-                body.rows(height, total_rows, |mut row| {
-                    let row_index = row.index();
-                    // Index
-                    row.col(|ui| {
-                        ui.label(row_index.to_string());
-                    });
-                    // Mass to charge
-                    row.col(|ui| {
-                        if let Some(value) = mass_to_charge.get(row_index) {
-                            let formated = self.settings.mass_to_charge.format(value);
-                            ui.label(formated).on_hover_text(formated.precision(None));
-                        } else {
-                            ui.label("null");
-                        }
-                    });
-                    // EIC
-                    row.col(|ui| {
-                        ui.add(ExtractedIonChromatogram {
-                            data_frame: &data_frame,
-                            row_index,
-                            settings: &self.settings,
-                        });
-                    });
-                });
-            });
-        Ok(())
+    pub(super) fn ui(&mut self, ui: &mut Ui) {
+        let id_salt = Id::new("CompositionTable");
+        let height = ui.text_style_height(&TextStyle::Heading);
+        let num_rows = self.data_frame.height() as _;
+        let num_columns = self.data_frame.width();
+        Table::new()
+            .id_salt(id_salt)
+            .num_rows(num_rows)
+            .columns(vec![
+                Column::default().resizable(true);
+                // Column::default().resizable(self.settings.resizable);
+                num_columns
+            ])
+            .num_sticky_cols(self.settings.sticky_columns)
+            .headers([HeaderRow::new(height)])
+            .auto_size_mode(AutoSizeMode::OnParentResize)
+            .show(ui, self);
     }
 
-    fn grouped_by_retention_time(&self, ui: &mut Ui) -> PolarsResult<()> {
-        let width = ui.spacing().interact_size.x;
-        let height = ui.spacing().interact_size.y;
-        let data_frame = ui.memory_mut(|memory| {
-            memory.caches.cache::<TableComputed>().get(TableKey {
-                data_frame: &self.data_frame,
-                settings: &self.settings,
-            })
-        });
-        let total_rows = data_frame.height();
-        let retention_time = data_frame["RetentionTime"].i32()?;
-        TableBuilder::new(ui)
-            .cell_layout(Layout::centered_and_justified(Direction::LeftToRight))
-            .column(Column::auto_with_initial_suggestion(width))
-            .columns(Column::auto(), COLUMN_COUNT - 1)
-            .auto_shrink(false)
-            .striped(true)
-            .header(height, |mut row| {
-                row.col(|ui| {
-                    ui.heading("Index");
-                });
-                row.col(|ui| {
-                    ui.heading("Retention time");
-                });
-                row.col(|ui| {
-                    ui.heading("MassSpectrum");
-                });
-            })
-            .body(|body| {
-                body.rows(height, total_rows, |mut row| {
-                    let row_index = row.index();
-                    // Index
-                    row.col(|ui| {
-                        ui.label(row_index.to_string());
-                    });
-                    // Retention time
-                    row.col(|ui| {
-                        if let Some(value) = retention_time.get(row_index) {
-                            let formated = self.settings.retention_time.format(value as _);
-                            ui.label(formated).on_hover_text(formated.precision(None));
-                        }
-                    });
-                    // Mass spectrum
-                    row.col(|ui| {
-                        ui.add(MassSpectrum {
-                            data_frame: &data_frame,
-                            row_index,
-                            settings: &self.settings,
-                        });
-                    });
-                });
-            });
-        Ok(())
+    fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: usize) {
+        ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
+        match (row, column) {
+            (0, 0) => {
+                ui.heading("FA");
+            }
+            (0, 1) => {
+                ui.heading("Temperature");
+            }
+            (0, 2) => {
+                ui.heading("DeltaTemperature");
+            }
+            (0, 3) => {
+                ui.heading("Time");
+            }
+            _ => unreachable!(),
+        }
     }
 
-    fn exploded(&self, ui: &mut Ui) -> PolarsResult<()> {
-        let width = ui.spacing().interact_size.x;
-        let height = ui.spacing().interact_size.y;
-        let data_frame = ui.memory_mut(|memory| {
-            memory.caches.cache::<TableComputed>().get(TableKey {
-                data_frame: &self.data_frame,
-                settings: &self.settings,
-            })
-        });
-        let total_rows = data_frame.height();
-        let retention_time = data_frame["RetentionTime"].i32()?;
-        let mass_to_charge = data_frame["MassToCharge"].f32()?;
-        let signal = data_frame["Signal"].u16()?;
-        TableBuilder::new(ui)
-            .cell_layout(Layout::centered_and_justified(Direction::LeftToRight))
-            .column(Column::auto_with_initial_suggestion(width))
-            .columns(Column::auto(), COLUMN_COUNT)
-            .auto_shrink(false)
-            .striped(true)
-            .header(height, |mut row| {
-                row.col(|ui| {
-                    ui.heading("Index");
-                });
-                let retention_time = |ui: &mut Ui| {
-                    ui.heading("Retention time");
-                };
-                let mass_to_charge = |ui: &mut Ui| {
-                    ui.heading("Mass to charge");
-                };
-                match self.settings.sort {
-                    Sort::RetentionTime => {
-                        row.col(retention_time);
-                        row.col(mass_to_charge);
-                    }
-                    Sort::MassToCharge => {
-                        row.col(mass_to_charge);
-                        row.col(retention_time);
-                    }
-                }
-                row.col(|ui| {
-                    ui.heading("Signal");
-                });
-            })
-            .body(|body| {
-                body.rows(height, total_rows, |mut row| {
-                    let row_index = row.index();
-                    // Index
-                    row.col(|ui| {
-                        ui.label(row_index.to_string());
-                    });
-                    // RetentionTime & MassToCharge
-                    let retention_time = |ui: &mut Ui| {
-                        if let Some(value) = retention_time.get(row_index) {
-                            let time = Time::new::<millisecond>(value as _);
-                            let value = match self.settings.retention_time.units {
-                                TimeUnits::Millisecond => time.get::<millisecond>(),
-                                TimeUnits::Second => time.get::<second>(),
-                                TimeUnits::Minute => time.get::<minute>(),
-                            };
-                            ui.label(format!(
-                                "{value:.*}",
-                                self.settings.retention_time.precision,
-                            ))
-                            .on_hover_text(format!("{value}"));
-                        }
-                    };
-                    let mass_to_charge = |ui: &mut Ui| {
-                        if let Some(value) = mass_to_charge.get(row_index) {
-                            ui.label(format!(
-                                "{value:.*}",
-                                self.settings.mass_to_charge.precision,
-                            ))
-                            .on_hover_text(format!("{value}"));
-                        }
-                    };
-                    match self.settings.sort {
-                        Sort::RetentionTime => {
-                            row.col(retention_time);
-                            row.col(mass_to_charge);
-                        }
-                        Sort::MassToCharge => {
-                            row.col(mass_to_charge);
-                            row.col(retention_time);
-                        }
-                    }
-                    // Signal
-                    row.col(|ui| {
-                        if let Some(value) = signal.get(row_index) {
-                            ui.label(format!("{value}"))
-                                .on_hover_text(format!("{value}"));
-                        }
-                    });
-                });
+    fn body_cell_content_ui(&mut self, ui: &mut Ui, row: usize, col: usize) {
+        match (row, col) {
+            (row, 0) => {
+                let series = self.data_frame["FA"]
+                    .struct_()
+                    .unwrap()
+                    .field_by_name("Label")
+                    .unwrap();
+                let values = series.str().unwrap();
+                let value = values.get(row).unwrap();
+                ui.label(value);
+            }
+            (row, column) => {
+                let value = self.data_frame[column].get(row).unwrap();
+                ui.label(value.to_string());
+                // ui.add(Cell {
+                //     row,
+                //     column: &self.data_frame[column],
+                //     percent: settings.percent,
+                //     precision: settings.precision,
+                // });
+            }
+        }
+    }
+}
+
+impl TableDelegate for TablePane {
+    fn header_cell_ui(&mut self, ui: &mut Ui, cell: &HeaderCellInfo) {
+        Frame::none()
+            .inner_margin(Margin::symmetric(MARGIN.x, MARGIN.y))
+            .show(ui, |ui| {
+                self.header_cell_content_ui(ui, cell.row_nr, cell.group_index)
             });
-        Ok(())
+    }
+
+    fn cell_ui(&mut self, ui: &mut Ui, cell: &CellInfo) {
+        if cell.row_nr % 2 == 1 {
+            ui.painter()
+                .rect_filled(ui.max_rect(), 0.0, ui.visuals().faint_bg_color);
+        }
+        Frame::none()
+            .inner_margin(Margin::symmetric(MARGIN.x, MARGIN.y))
+            .show(ui, |ui| {
+                self.body_cell_content_ui(ui, cell.row_nr as _, cell.col_nr)
+            });
     }
 }

@@ -9,17 +9,12 @@
                     dtype: UInt8,
                 ),
                 (
+                    name: "Indices",
+                    dtype: List(UInt8),
+                ),
+                (
                     name: "Bounds",
-                    dtype: List(Struct([
-                        (
-                            name: "Index",
-                            dtype: Int8,
-                        ),
-                        (
-                            name: "Multiplicity",
-                            dtype: UInt8,
-                        ),
-                    ])),
+                    dtype: List(Int8),
                 ),
                 (
                     name: "Label",
@@ -72,1153 +67,575 @@
                     ],
                 },
                 {
-                    "name": "Bounds",
-                    "datatype": List(Struct([
-                        (
-                            name: "Index",
-                            dtype: Int8,
-                        ),
-                        (
-                            name: "Multiplicity",
-                            dtype: UInt8,
-                        ),
-                    ])),
+                    "name": "Indices",
+                    "datatype": List(UInt8),
                     "bit_settings": "",
                     "values": [
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                9,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                10,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                9,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                10,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                9,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                9,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        9,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                9,
+                                12,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                9,
+                                12,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        10,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                6,
+                                9,
+                                12,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                9,
+                                12,
+                                15,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        9,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                11,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                11,
+                                14,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        10,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                8,
+                                11,
+                                14,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                11,
+                                14,
+                                17,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        -9,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                5,
+                                8,
+                                11,
+                                14,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        9,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                13,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 2,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        -9,
-                                        -12,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                13,
+                                16,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                5,
+                                8,
+                                11,
+                                14,
+                                17,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 2,
+                            "datatype": UInt8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        9,
-                                        12,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                15,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 3,
+                            "datatype": UInt8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        6,
-                                        9,
-                                        12,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                4,
+                                7,
+                                10,
+                                13,
+                                16,
+                                19,
+                            ],
+                        },
+                    ],
+                },
+                {
+                    "name": "Bounds",
+                    "datatype": List(Int8),
+                    "bit_settings": "",
+                    "values": [
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 3,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        9,
-                                        12,
-                                        15,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        11,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                -2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 2,
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        11,
-                                        14,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 3,
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        8,
-                                        11,
-                                        14,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                -2,
+                                -2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                2,
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 3,
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        11,
-                                        14,
-                                        17,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                2,
+                                2,
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 4,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        5,
-                                        8,
-                                        11,
-                                        14,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                2,
+                                2,
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        13,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                2,
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 2,
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        13,
-                                        16,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                2,
+                                2,
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 5,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        5,
-                                        8,
-                                        11,
-                                        14,
-                                        17,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                        2,
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                2,
+                                2,
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 0,
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [],
-                                },
+                                2,
+                                2,
+                                2,
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 1,
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        15,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                    ],
-                                },
+                                2,
                             ],
                         },
                         {
                             "name": "",
-                            "datatype": Struct([
-                                (
-                                    name: "Index",
-                                    dtype: Int8,
-                                ),
-                                (
-                                    name: "Multiplicity",
-                                    dtype: UInt8,
-                                ),
-                            ]),
-                            "length": 6,
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
                             "values": [
-                                {
-                                    "name": "Index",
-                                    "datatype": Int8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        4,
-                                        7,
-                                        10,
-                                        13,
-                                        16,
-                                        19,
-                                    ],
-                                },
-                                {
-                                    "name": "Multiplicity",
-                                    "datatype": UInt8,
-                                    "bit_settings": "",
-                                    "values": [
-                                        2,
-                                        2,
-                                        2,
-                                        2,
-                                        2,
-                                        2,
-                                    ],
-                                },
+                                2,
+                                2,
+                            ],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [
+                                2,
+                                2,
+                                2,
+                                2,
+                                2,
+                            ],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [
+                                2,
+                            ],
+                        },
+                        {
+                            "name": "",
+                            "datatype": Int8,
+                            "bit_settings": "",
+                            "values": [
+                                2,
+                                2,
+                                2,
+                                2,
+                                2,
+                                2,
                             ],
                         },
                     ],

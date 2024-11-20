@@ -1,11 +1,8 @@
-use std::mem::take;
-
+use super::{plot::PlotPane, table::TablePane, Pane};
 use crate::{
     app::{icon, localize},
     utils::ContainerExt,
 };
-
-use super::{plot::PlotPane, table::TablePane, Pane};
 use egui::{menu::bar, CollapsingHeader, CursorIcon, RichText, Ui, WidgetText};
 use egui_phosphor::regular::{CHART_BAR, LINK, TABLE, X};
 use egui_tiles::{Tile, TileId, Tiles, Tree, UiResponse};
@@ -49,22 +46,22 @@ impl Behavior {
                             .on_hover_text(localize!("table"))
                             .clicked()
                         {
-                            *pane = match pane {
-                                Pane::Plot(PlotPane {
-                                    data_frame,
-                                    settings,
-                                }) => Pane::Table(TablePane {
-                                    data_frame: data_frame.clone(),
-                                    settings: *settings,
-                                }),
-                                Pane::Table(TablePane {
-                                    data_frame,
-                                    settings,
-                                }) => Pane::Plot(PlotPane {
-                                    data_frame: data_frame.clone(),
-                                    settings: *settings,
-                                }),
-                            };
+                            // *pane = match pane {
+                            //     Pane::Plot(PlotPane {
+                            //         data_frame,
+                            //         settings,
+                            //     }) => Pane::Table(TablePane {
+                            //         data_frame: data_frame.clone(),
+                            //         settings: *settings,
+                            //     }),
+                            //     Pane::Table(TablePane {
+                            //         data_frame,
+                            //         settings,
+                            //     }) => Pane::Plot(PlotPane {
+                            //         data_frame: data_frame,
+                            //         settings: settings,
+                            //     }),
+                            // };
                             // if let Some(id) = self.tree.iter {
                             //     // if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
                             //     //     container.set_kind(ContainerKind::Tabs);
