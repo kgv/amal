@@ -6,7 +6,10 @@ use egui::{
     emath::Float,
     util::cache::{ComputerMut, FrameCache},
 };
-use polars::{frame::DataFrame, prelude::*};
+use polars::{
+    lazy::dsl::{max_horizontal, min_horizontal},
+    prelude::*,
+};
 use std::hash::{Hash, Hasher};
 use tracing::error;
 
@@ -35,15 +38,13 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
             ])
             .alias("Time"),
         ]);
-        println!("1: {}", lazy_frame.clone().collect().unwrap());
-        // lazy_frame = concat(
+        // println!("1: {}", lazy_frame.clone().collect().unwrap());
+        // lazy_frame = concat_lf_diagonal(
         //     [
         //         lazy_frame,
         //         df! {
-        //             "Mode" => df! {
-        //                 "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
-        //                 "TemperatureStep" => [key.settings.interpolation.temperature_step],
-        //             }.unwrap().into_struct(PlSmallStr::EMPTY),
+        //             "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
+        //             "TemperatureStep" => [key.settings.interpolation.temperature_step],
         //         }
         //         .unwrap()
         //         .lazy(),
@@ -51,65 +52,45 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
         //     UnionArgs::default(),
         // )
         // .unwrap();
-        let other = df! {
-            "Mode" => df! {
-                "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
-                "TemperatureStep" => [key.settings.interpolation.temperature_step],
-            }.unwrap().into_struct(PlSmallStr::EMPTY),
-            "FA" => df! {
-                "Carbons" => &[
-                    18,
-                ],
-                "Bounds" => &[
-                    df! { "Index" => [9i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [-9, -12i8], "Multiplicity" => [2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [9, 12i8], "Multiplicity" => [2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [6, 9, 12i8], "Multiplicity" => [2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [9, 12, 15i8], "Multiplicity" => [2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [11i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [11, 14i8], "Multiplicity" => [2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [8, 11, 14i8], "Multiplicity" => [2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [11, 14, 17i8], "Multiplicity" => [2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [5, 8, 11, 14i8], "Multiplicity" => [2, 2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [13i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [13, 16i8], "Multiplicity" => [2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [5, 8, 11, 14, 17i8], "Multiplicity" => [2, 2, 2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8), "Multiplicity" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8) }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [15i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                    df! { "Index" => [4, 7, 10, 13, 16, 19i8], "Multiplicity" => [2, 2, 2, 2, 2, 2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                ],
-                "Label" => &[
-                    "Methyl cis-9 oleate [Methyl cis-9-octadecenoate]",
-                    "Methyl linolelaidate [Methyl trans,trans-9,12-octadecadienoate]",
-                    "Nonadecanoic acid methyl ester",
-                    "Methyl linoleate [Methyl 9-cis,12-cis-octadecadienoate]",
-                    "Methyl-gamma-linolenate, (6Z,9Z,12Z-octadecatrienoate)",
-                    "Methyl arachidate",
-                    "Methyl alfa linolenate, Methyl (9Z,12Z,15Z)-octadeca-9,12,15-trienoate",
-                    "Methyl cis-11 eicosenoate",
-                    "Methyl heneicosanoate",
-                    "Methyl cis-11,14 eicosadienoate",
-                    "Methyl cis-8,11,14 eicosatrienoate",
-                    "Methyl behenate [Methyl docosanoate]",
-                    "Methyl cis-11,14,17 eicosatrienoate",
-                    "Methyl arachidonate",
-                    "Methyl erucate [Methyl cis-13-docosenoate]",
-                    "Methyl tricosanoate",
-                    "Methyl cis-13,16 docosadienoate",
-                    "Methyl cis-5,8,11,14,17 eicosapentaenoate",
-                    "Methyl lignocerate [Methyl tetracosanoate]",
-                    "Methyl nervonate [Methyl cis-15-tetracosenoate]",
-                    "Methyl cis-4,7,10,13,16,19 docosahexaenoate",
-                ],
-            }?.into_struct(PlSmallStr::EMPTY),
-        }
-        .unwrap()
-        .lazy();
+        // let other = df! {
+        //     "Mode" => df! {
+        //         "OnsetTemperature" => [key.settings.interpolation.onset_temperature],
+        //         "TemperatureStep" => [key.settings.interpolation.temperature_step],
+        //     }.unwrap().into_struct(PlSmallStr::EMPTY),
+        //     // "FA" => df! {
+        //     //     "Carbons" => &[
+        //     //         18,
+        //     //     ],
+        //     //     "Bounds" => &[
+        //     //         df! { "Index" => [9i8], "Multiplicity" => [2u8] }?.into_struct(PlSmallStr::EMPTY).into_series(),
+        //     //     ],
+        //     //     "Label" => &[
+        //     //         "Methyl cis-9 oleate [Methyl cis-9-octadecenoate]",
+        //     //         "Methyl linolelaidate [Methyl trans,trans-9,12-octadecadienoate]",
+        //     //         "Nonadecanoic acid methyl ester",
+        //     //         "Methyl linoleate [Methyl 9-cis,12-cis-octadecadienoate]",
+        //     //         "Methyl-gamma-linolenate, (6Z,9Z,12Z-octadecatrienoate)",
+        //     //         "Methyl arachidate",
+        //     //         "Methyl alfa linolenate, Methyl (9Z,12Z,15Z)-octadeca-9,12,15-trienoate",
+        //     //         "Methyl cis-11 eicosenoate",
+        //     //         "Methyl heneicosanoate",
+        //     //         "Methyl cis-11,14 eicosadienoate",
+        //     //         "Methyl cis-8,11,14 eicosatrienoate",
+        //     //         "Methyl behenate [Methyl docosanoate]",
+        //     //         "Methyl cis-11,14,17 eicosatrienoate",
+        //     //         "Methyl arachidonate",
+        //     //         "Methyl erucate [Methyl cis-13-docosenoate]",
+        //     //         "Methyl tricosanoate",
+        //     //         "Methyl cis-13,16 docosadienoate",
+        //     //         "Methyl cis-5,8,11,14,17 eicosapentaenoate",
+        //     //         "Methyl lignocerate [Methyl tetracosanoate]",
+        //     //         "Methyl nervonate [Methyl cis-15-tetracosenoate]",
+        //     //         "Methyl cis-4,7,10,13,16,19 docosahexaenoate",
+        //     //     ],
+        //     // }?.into_struct(PlSmallStr::EMPTY),
+        // }
+        // .unwrap()
+        // .lazy();
         println!("2: {}", lazy_frame.clone().collect().unwrap());
         // lazy_frame = lazy_frame.join(
         //     df! {
@@ -146,6 +127,76 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
             ])
             .alias("Mass"),
         ]);
+        // Filter
+        if !key.settings.filter.fatty_acids.is_empty() {
+            let mut expr = lit(false);
+            for fatty_acid in &key.settings.filter.fatty_acids {
+                // expr = expr.and(col("FA").fa().c().eq(lit(fatty_acid.carbons)).not());
+                let indices = Scalar::new(
+                    DataType::List(Box::new(DataType::UInt8)),
+                    AnyValue::List(Series::from_iter(&fatty_acid.indices)),
+                );
+                let bounds = Scalar::new(
+                    DataType::List(Box::new(DataType::Int8)),
+                    AnyValue::List(Series::from_iter(&fatty_acid.bounds)),
+                );
+                let fa = col("FA")
+                    .fa()
+                    .c()
+                    .eq(lit(fatty_acid.carbons))
+                    .and(col("FA").fa().indices().eq(lit(indices)))
+                    .and(col("FA").fa().bounds().eq(lit(bounds)));
+                expr = expr.or(fa.clone());
+            }
+            lazy_frame = lazy_frame.filter(expr);
+            // .with_columns([col("Time")
+            //     .struct_()
+            //     .field_by_name("Mean")
+            //     // .filter(fa)
+            //     .diff(1, NullBehavior::Ignore)
+            //     .over(["FA"])
+            //     .alias("TEMP")]);
+            // // Sort
+            // lazy_frame = lazy_frame.sort_by_exprs(
+            //     [diff(left, right).over(["Mode"])],
+            //     SortMultipleOptions::default().with_order_reversed(),
+            // );
+        }
+        println!("3: {}", lazy_frame.clone().collect().unwrap());
+        // let mut lazy_frame = lazy_frame.select([
+        //     col("Mode"),
+        //     col("FA"),
+        //     col("Time").struct_().field_by_name("Mean").alias("Time"),
+        // ]);
+        let lazy_frame = lazy_frame
+            .clone()
+            .select([
+                as_struct(vec![col("FA"), col("Mode")]).alias("From"),
+                col("Time")
+                    .struct_()
+                    .field_by_name("Mean")
+                    .alias("FromTime"),
+            ])
+            .with_row_index("LeftIndex", None)
+            .join_builder()
+            .with(
+                lazy_frame
+                    .select([
+                        as_struct(vec![col("FA"), col("Mode")]).alias("To"),
+                        col("Time").struct_().field_by_name("Mean").alias("ToTime"),
+                    ])
+                    .with_row_index("RightIndex", None),
+            )
+            .join_where(vec![
+                col("From").neq(col("To")),
+                col("LeftIndex").lt_eq(col("RightIndex")),
+            ])
+            .select([
+                col("From"),
+                col("To"),
+                (col("ToTime") - col("FromTime")).alias("Time"),
+            ]);
+        println!("4: {}", lazy_frame.clone().collect().unwrap());
         // if let Some(temperature_step) = key.settings.filter_temperature_step {
         //     lazy_frame = lazy_frame.filter(
         //         col("Mode")
@@ -188,6 +239,25 @@ impl Hash for Key<'_> {
         // }
         self.settings.hash(state);
     }
+}
+
+// col("FA")
+//                 .fa()
+//                 .c()
+//                 .eq(lit(18))
+//                 .and(col("FA").fa().saturated()),
+fn diff(left: Expr, right: Expr) -> Expr {
+    (col("Time")
+        .struct_()
+        .field_by_name("Mean")
+        .filter(left)
+        .first()
+        - col("Time")
+            .struct_()
+            .field_by_name("Mean")
+            .filter(right)
+            .first())
+    .abs()
 }
 
 fn relative_time() -> Expr {

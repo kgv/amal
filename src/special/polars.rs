@@ -74,6 +74,10 @@ impl Rcooh {
         self.c() - lit(2) * self.unsaturation()
     }
 
+    pub fn bounds(&self) -> Expr {
+        self.0.clone().struct_().field_by_name("Bounds")
+    }
+
     pub fn indices(&self) -> Expr {
         self.0.clone().struct_().field_by_name("Indices")
     }
@@ -92,7 +96,7 @@ impl Rcooh {
             .struct_()
             .field_by_name("Bounds")
             .list()
-            .eval(col("") - lit(1), true)
+            .eval(col("").abs() - lit(1), true)
             .list()
             .sum()
     }

@@ -1,5 +1,9 @@
-use crate::app::MAX_PRECISION;
+use crate::{
+    app::MAX_PRECISION,
+    special::fa_column::{ColumnExt, FattyAcid},
+};
 use egui::{emath::Float, ComboBox, DragValue, Slider, Ui, WidgetText};
+use itertools::Itertools;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -12,24 +16,56 @@ use uom::si::{
 };
 
 /// Settings
-#[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) struct Settings {
     pub(crate) sticky_columns: usize,
     pub(crate) resizable: bool,
+    pub(crate) filter: Filter,
     pub(crate) interpolation: Interpolation,
     pub(crate) filter_onset_temperature: Option<i32>,
     pub(crate) filter_temperature_step: Option<i32>,
 }
 
-impl Default for Settings {
-    fn default() -> Self {
+impl Settings {
+    pub const fn new() -> Self {
         Self {
             sticky_columns: 1,
             resizable: false,
-            interpolation: Default::default(),
+            filter: Filter::new(),
+            interpolation: Interpolation::new(),
             filter_onset_temperature: None,
             filter_temperature_step: None,
         }
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Filter
+#[derive(Clone, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) struct Filter {
+    pub(crate) fatty_acids: Vec<FattyAcid>,
+}
+
+impl Filter {
+    pub const fn new() -> Self {
+        Self {
+            fatty_acids: Vec::new(),
+        }
+    }
+}
+
+impl Filter {
+    fn remove(&mut self, target: &FattyAcid) -> Option<FattyAcid> {
+        let position = self
+            .fatty_acids
+            .iter()
+            .position(|source| source == target)?;
+        Some(self.fatty_acids.remove(position))
     }
 }
 
@@ -38,6 +74,15 @@ impl Default for Settings {
 pub(crate) struct Interpolation {
     pub(crate) onset_temperature: f64,
     pub(crate) temperature_step: f64,
+}
+
+impl Interpolation {
+    pub const fn new() -> Self {
+        Self {
+            onset_temperature: 0.0,
+            temperature_step: 0.0,
+        }
+    }
 }
 
 impl Hash for Interpolation {
@@ -73,7 +118,33 @@ impl Settings {
             &mut self.interpolation.temperature_step,
             min..=max,
         ));
-        ui.label("Filter");
+        ui.horizontal(|ui| {
+            ui.label("Filter");
+            ComboBox::from_id_salt("FilterFattyAcids")
+                // .selected_text(self.sort.text())
+                .show_ui(ui, |ui| {
+                    let fatty_acids = data_frame["FA"]
+                        .unique()
+                        .unwrap()
+                        .sort(Default::default())
+                        .unwrap()
+                        .fa();
+                    for fatty_acid in fatty_acids.iter().unwrap() {
+                        let contains = self.filter.fatty_acids.contains(&fatty_acid);
+                        let mut selected = contains;
+                        ui.toggle_value(&mut selected, fatty_acid.to_string());
+                        if selected && !contains {
+                            self.filter.fatty_acids.push(fatty_acid);
+                        } else if !selected && contains {
+                            self.filter.remove(&fatty_acid);
+                        }
+                    }
+                });
+            if ui.button("text").clicked() {
+                self.filter.fatty_acids = Vec::new();
+            }
+        });
+
         // ComboBox::from_id_salt("FilterOnsetTemperature")
         //     // .selected_text(self.sort.text())
         //     .show_ui(ui, |ui| {

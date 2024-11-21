@@ -24,12 +24,16 @@ itertools = "0.13.0"
 # https://github.com/pola-rs/polars/issues/17192
 molecule = { git = "https://github.com/ippras/molecule" }
 polars = { version = "0.44.2", features = [
+    "abs",
+    "cross_join",
+    "diagonal_concat",
     "dtype-i16",
     "dtype-i8",
     "dtype-struct",
     "dtype-u16",
     "dtype-u8",
     "fmt_no_tty",
+    "iejoin",
     "lazy",
     "list_eval",
     "round_series",

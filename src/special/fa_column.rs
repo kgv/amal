@@ -1,6 +1,11 @@
 use crate::r#const::relative_atomic_mass::{C, H, O};
+use itertools::izip;
 use polars::prelude::*;
-use std::fmt::{self, Display, Formatter};
+use serde::{Deserialize, Serialize};
+use std::{
+    fmt::{self, Display, Formatter, Write},
+    iter::zip,
+};
 
 /// Extension methods for [`Column`]
 pub trait ColumnExt {
@@ -18,6 +23,7 @@ impl ColumnExt for Column {
 pub struct FattyAcids {
     carbons: Series,
     indices: Series,
+    bounds: Series,
     labels: Series,
 }
 
@@ -25,10 +31,12 @@ impl FattyAcids {
     pub fn new(column: &Column) -> PolarsResult<Self> {
         let carbons = column.struct_()?.field_by_name("Carbons")?;
         let indices = column.struct_()?.field_by_name("Indices")?;
+        let bounds = column.struct_()?.field_by_name("Bounds")?;
         let labels = column.struct_()?.field_by_name("Label")?;
         Ok(Self {
             carbons,
             indices,
+            bounds,
             labels,
         })
     }
@@ -44,21 +52,49 @@ impl FattyAcids {
             .to_vec_null_aware()
             .left()
             .unwrap();
+        let bounds = self
+            .bounds
+            .list()?
+            .get_as_series(index)
+            .unwrap()
+            .i8()?
+            .to_vec_null_aware()
+            .left()
+            .unwrap();
         let label = self.labels.str()?.get(index).unwrap().to_owned();
         Ok(FattyAcid {
             carbons,
             indices,
+            bounds,
             label,
         })
+    }
+
+    pub fn iter(&self) -> PolarsResult<impl Iterator<Item = FattyAcid> + '_> {
+        Ok(izip!(
+            self.carbons.u8()?,
+            self.indices.list()?,
+            self.bounds.list()?,
+            self.labels.str()?
+        )
+        .filter_map(|(carbons, indices, bounds, label)| {
+            Some(FattyAcid {
+                carbons: carbons?,
+                indices: indices?.u8().unwrap().to_vec_null_aware().left()?,
+                bounds: bounds?.i8().unwrap().to_vec_null_aware().left()?,
+                label: label?.to_owned(),
+            })
+        }))
     }
 }
 
 /// Fatty acid
-#[derive(Clone)]
+#[derive(Clone, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
 pub struct FattyAcid {
-    carbons: u8,
-    indices: Vec<u8>,
-    label: String,
+    pub carbons: u8,
+    pub indices: Vec<u8>,
+    pub bounds: Vec<i8>,
+    pub label: String,
 }
 
 impl FattyAcid {
@@ -70,12 +106,22 @@ impl FattyAcid {
 impl Display for FattyAcid {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}:{}", self.carbons, self.indices.len())?;
-        let mut indices = self.indices.iter();
-        if let Some(index) = indices.next() {
+        let mut indices = zip(&self.indices, &self.bounds);
+        if let Some((index, &bound)) = indices.next() {
             write!(f, "-{index}")?;
+            if bound < 0 {
+                f.write_char('t')?;
+            } else {
+                f.write_char('c')?;
+            }
         }
-        for index in indices {
+        for (index, &bound) in indices {
             write!(f, ",{index}")?;
+            if bound < 0 {
+                f.write_char('t')?;
+            } else {
+                f.write_char('c')?;
+            }
         }
         Ok(())
     }

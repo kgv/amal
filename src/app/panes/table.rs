@@ -99,66 +99,66 @@ impl TablePane {
                 let value = indices.get(row).unwrap();
                 ui.label(value.to_string());
             }
-            (row, MODE) => {
-                let mode = self.target["Mode"].struct_().unwrap();
-                let onset_temperature = mode.field_by_name("OnsetTemperature").unwrap();
-                let temperature_step = mode.field_by_name("TemperatureStep").unwrap();
-                ui.label(format!(
-                    "{}/{}",
-                    onset_temperature.str_value(row).unwrap(),
-                    temperature_step.str_value(row).unwrap()
-                ));
-            }
-            (row, FA) => {
-                let fatty_acids = self.target["FA"].fa();
-                let fatty_acid = fatty_acids.get(row).unwrap();
-                ui.label(fatty_acid.to_string())
-                    .on_hover_text(fatty_acid.label());
-            }
-            (row, MASS) => {
-                let mass = self.target["Mass"].struct_().unwrap();
-                let rcooch3 = mass.field_by_name("RCOOCH3").unwrap();
-                ui.label(rcooch3.str_value(row).unwrap()).on_hover_ui(|ui| {
-                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                        ui.label("RCOOCH3");
-                        ui.label(rcooch3.str_value(row).unwrap());
-                        ui.end_row();
-                        {
-                            ui.label("RCOOH");
-                            let rcooh = mass.field_by_name("RCOOH").unwrap();
-                            ui.label(rcooh.str_value(row).unwrap());
-                        }
-                        ui.end_row();
-                        {
-                            ui.label("RCOO");
-                            let rcoo = mass.field_by_name("RCOO").unwrap();
-                            ui.label(rcoo.str_value(row).unwrap());
-                        }
-                    });
-                });
-            }
-            (row, TIME) => {
-                let time = self.target["Time"].struct_().unwrap();
-                let means = time.field_by_name("Mean").unwrap();
-                ui.label(means.str_value(row).unwrap()).on_hover_ui(|ui| {
-                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                        // Absolute
-                        ui.label("Absolute");
-                        ui.horizontal(|ui| {
-                            ui.label(means.str_value(row).unwrap());
-                            ui.label("±");
-                            let standard_deviations =
-                                time.field_by_name("StandardDeviation").unwrap();
-                            ui.label(standard_deviations.str_value(row).unwrap());
-                        });
-                        ui.end_row();
-                        // Relative
-                        let relatives = time.field_by_name("Relative").unwrap();
-                        ui.label("Relative");
-                        ui.label(relatives.str_value(row).unwrap());
-                    });
-                });
-            }
+            // (row, MODE) => {
+            //     let mode = self.target["Mode"].struct_().unwrap();
+            //     let onset_temperature = mode.field_by_name("OnsetTemperature").unwrap();
+            //     let temperature_step = mode.field_by_name("TemperatureStep").unwrap();
+            //     ui.label(format!(
+            //         "{}/{}",
+            //         onset_temperature.str_value(row).unwrap(),
+            //         temperature_step.str_value(row).unwrap()
+            //     ));
+            // }
+            // (row, FA) => {
+            //     let fatty_acids = self.target["FA"].fa();
+            //     let fatty_acid = fatty_acids.get(row).unwrap();
+            //     ui.label(fatty_acid.to_string())
+            //         .on_hover_text(fatty_acid.label());
+            // }
+            // (row, MASS) => {
+            //     let mass = self.target["Mass"].struct_().unwrap();
+            //     let rcooch3 = mass.field_by_name("RCOOCH3").unwrap();
+            //     ui.label(rcooch3.str_value(row).unwrap()).on_hover_ui(|ui| {
+            //         Grid::new(ui.next_auto_id()).show(ui, |ui| {
+            //             ui.label("RCOOCH3");
+            //             ui.label(rcooch3.str_value(row).unwrap());
+            //             ui.end_row();
+            //             {
+            //                 ui.label("RCOOH");
+            //                 let rcooh = mass.field_by_name("RCOOH").unwrap();
+            //                 ui.label(rcooh.str_value(row).unwrap());
+            //             }
+            //             ui.end_row();
+            //             {
+            //                 ui.label("RCOO");
+            //                 let rcoo = mass.field_by_name("RCOO").unwrap();
+            //                 ui.label(rcoo.str_value(row).unwrap());
+            //             }
+            //         });
+            //     });
+            // }
+            // (row, TIME) => {
+            //     let time = self.target["Time"].struct_().unwrap();
+            //     let means = time.field_by_name("Mean").unwrap();
+            //     ui.label(means.str_value(row).unwrap()).on_hover_ui(|ui| {
+            //         Grid::new(ui.next_auto_id()).show(ui, |ui| {
+            //             // Absolute
+            //             ui.label("Absolute");
+            //             ui.horizontal(|ui| {
+            //                 ui.label(means.str_value(row).unwrap());
+            //                 ui.label("±");
+            //                 let standard_deviations =
+            //                     time.field_by_name("StandardDeviation").unwrap();
+            //                 ui.label(standard_deviations.str_value(row).unwrap());
+            //             });
+            //             ui.end_row();
+            //             // Relative
+            //             let relatives = time.field_by_name("Relative").unwrap();
+            //             ui.label("Relative");
+            //             ui.label(relatives.str_value(row).unwrap());
+            //         });
+            //     });
+            // }
             (row, column) => {
                 let value = self.target[column].get(row).unwrap();
                 ui.label(value.to_string());
