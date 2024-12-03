@@ -164,7 +164,7 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
         }
         println!("3: {}", lazy_frame.clone().collect().unwrap());
         // Join
-        let lazy_frame = lazy_frame
+        lazy_frame = lazy_frame
             .clone()
             .select([
                 as_struct(vec![col("FA"), col("Mode")]).alias("From"),
@@ -188,7 +188,25 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
                 col("From")
                     .struct_()
                     .field_by_name("Mode")
-                    .eq(col("To").struct_().field_by_name("Mode")),
+                    .struct_()
+                    .field_by_name("OnsetTemperature")
+                    .eq(col("To")
+                        .struct_()
+                        .field_by_name("Mode")
+                        .struct_()
+                        .field_by_name("OnsetTemperature"))
+                    .and(
+                        col("From")
+                            .struct_()
+                            .field_by_name("Mode")
+                            .struct_()
+                            .field_by_name("TemperatureStep")
+                            .eq(col("To")
+                                .struct_()
+                                .field_by_name("Mode")
+                                .struct_()
+                                .field_by_name("TemperatureStep")),
+                    ),
                 // Fatty asids not equals
                 col("From")
                     .struct_()
@@ -197,14 +215,16 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
                 col("LeftIndex").lt_eq(col("RightIndex")),
             ]);
         println!("4: {}", lazy_frame.clone().collect().unwrap());
-        // .select([
-        //     col("From"),
-        //     col("To"),
-        //     (col("ToTime") - col("FromTime"))
-        //         .over([col("From").struct_().field_by_name("Mode")])
-        //         .alias("Time"),
-        // ]);
+        // Cache
+        lazy_frame = lazy_frame.cache().select([
+            col("From"),
+            col("To"),
+            (col("ToTime") - col("FromTime"))
+                .over([col("From").struct_().field_by_name("Mode")])
+                .alias("Time"),
+        ]);
         println!("5: {}", lazy_frame.clone().collect().unwrap());
+        lazy_frame = lazy_frame.sort(["Time"], SortMultipleOptions::new().with_order_reversed());
         // if let Some(temperature_step) = key.settings.filter_temperature_step {
         //     lazy_frame = lazy_frame.filter(
         //         col("Mode")
