@@ -163,11 +163,7 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
             // );
         }
         println!("3: {}", lazy_frame.clone().collect().unwrap());
-        // let mut lazy_frame = lazy_frame.select([
-        //     col("Mode"),
-        //     col("FA"),
-        //     col("Time").struct_().field_by_name("Mean").alias("Time"),
-        // ]);
+        // Join
         let lazy_frame = lazy_frame
             .clone()
             .select([
@@ -188,15 +184,27 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
                     .with_row_index("RightIndex", None),
             )
             .join_where(vec![
-                col("From").neq(col("To")),
+                // Same modes
+                col("From")
+                    .struct_()
+                    .field_by_name("Mode")
+                    .eq(col("To").struct_().field_by_name("Mode")),
+                // Fatty asids not equals
+                col("From")
+                    .struct_()
+                    .field_by_name("FA")
+                    .neq(col("To").struct_().field_by_name("FA")),
                 col("LeftIndex").lt_eq(col("RightIndex")),
-            ])
-            .select([
-                col("From"),
-                col("To"),
-                (col("ToTime") - col("FromTime")).alias("Time"),
             ]);
         println!("4: {}", lazy_frame.clone().collect().unwrap());
+        // .select([
+        //     col("From"),
+        //     col("To"),
+        //     (col("ToTime") - col("FromTime"))
+        //         .over([col("From").struct_().field_by_name("Mode")])
+        //         .alias("Time"),
+        // ]);
+        println!("5: {}", lazy_frame.clone().collect().unwrap());
         // if let Some(temperature_step) = key.settings.filter_temperature_step {
         //     lazy_frame = lazy_frame.filter(
         //         col("Mode")
@@ -218,10 +226,22 @@ pub struct Key<'a> {
     pub(crate) settings: &'a Settings,
 }
 
+// impl Hash for Key<'_> {
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+//         for column in self.data_frame.get_columns() {
+//             for value in column.phys_iter() {
+//                 value.hash(state);
+//             }
+//         }
+//         self.settings.hash(state);
+//     }
+// }
 impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        // for value in self.data_frame["FA"].phys_iter() {
-        //     value.hash(state);
+        // for column in self.data_frame.get_columns() {
+        //     for value in column.phys_iter() {
+        //         value.hash(state);
+        //     }
         // }
         for value in self.data_frame["OnsetTemperature"].f64().unwrap() {
             value.map(|value| value.ord()).hash(state);
