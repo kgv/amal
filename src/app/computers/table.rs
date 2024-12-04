@@ -207,24 +207,37 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
                                 .struct_()
                                 .field_by_name("TemperatureStep")),
                     ),
+                // col("From")
+                //     .struct_()
+                //     .field_by_name("FA")
+                //     .neq(col("To").struct_().field_by_name("FA")),
                 // Fatty asids not equals
-                col("From")
-                    .struct_()
-                    .field_by_name("FA")
-                    .neq(col("To").struct_().field_by_name("FA")),
-                col("LeftIndex").lt_eq(col("RightIndex")),
+                col("LeftIndex").lt(col("RightIndex")),
             ]);
         println!("4: {}", lazy_frame.clone().collect().unwrap());
         // Cache
         lazy_frame = lazy_frame.cache().select([
-            col("From"),
-            col("To"),
+            col("From").struct_().field_by_name("Mode").alias("Mode"),
+            col("From").struct_().field_by_name("FA").name().keep(),
+            col("To").struct_().field_by_name("FA").name().keep(),
             (col("ToTime") - col("FromTime"))
                 .over([col("From").struct_().field_by_name("Mode")])
                 .alias("Time"),
         ]);
         println!("5: {}", lazy_frame.clone().collect().unwrap());
-        lazy_frame = lazy_frame.sort(["Time"], SortMultipleOptions::new().with_order_reversed());
+        // Sort
+        lazy_frame = lazy_frame.sort_by_exprs(
+            [col("Time").abs().median().over([col("Mode")])],
+            SortMultipleOptions::new().with_order_reversed(),
+        );
+        // lazy_frame = lazy_frame.sort_by_exprs(
+        //     [cols(["From", "To", "Time"]).over([col("From"), col("To")])],
+        //     SortMultipleOptions::new().with_order_reversed(),
+        // );
+        // lazy_frame = lazy_frame.sort(
+        //     ["Time", "Mode", "From", "To"],
+        //     SortMultipleOptions::new().with_order_reversed(),
+        // );
         // if let Some(temperature_step) = key.settings.filter_temperature_step {
         //     lazy_frame = lazy_frame.filter(
         //         col("Mode")

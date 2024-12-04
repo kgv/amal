@@ -11,9 +11,9 @@ use serde::{Deserialize, Serialize};
 
 const INDEX: usize = 0;
 const MODE: usize = 1;
-const FA: usize = 2;
-const TIME: usize = 3;
-const ECL: usize = 4;
+const FROM: usize = 2;
+const TO: usize = 3;
+const TIME: usize = 4;
 const ECN: usize = 5;
 const MASS: usize = 6;
 
@@ -73,14 +73,14 @@ impl TablePane {
             (0, MODE) => {
                 ui.heading("Mode");
             }
-            (0, FA) => {
-                ui.heading("FA");
+            (0, FROM) => {
+                ui.heading("From");
+            }
+            (0, TO) => {
+                ui.heading("To");
             }
             (0, TIME) => {
                 ui.heading("Time");
-            }
-            (0, ECL) => {
-                ui.heading("ECL");
             }
             (0, ECN) => {
                 ui.heading("ECN");

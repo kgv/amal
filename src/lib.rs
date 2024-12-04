@@ -17,6 +17,25 @@ mod test {
     use special::polars::{ExprExt, Mass as _};
     use std::{fs::write, iter::empty};
 
+    fn format(path: &str) -> Result<()> {
+        let source = std::fs::read_to_string(path)?;
+        let data_frame: DataFrame = ron::de::from_str(&source)?;
+        let formated = ron::ser::to_string_pretty(
+            &data_frame,
+            PrettyConfig::default().extensions(Extensions::IMPLICIT_SOME),
+        )?;
+        if source != formated {
+            std::fs::copy(path, format!("{path}.bk"))?;
+            std::fs::write(path, formated)?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_format() -> Result<()> {
+        format("input/data/60.1.ron")
+    }
+
     // Series::from_iter([fatty_acid!(16).mass(), fatty_acid!(14).mass(), fatty_acid!(18).mass()])
     #[test]
     fn test() -> Result<()> {
@@ -299,11 +318,7 @@ mod test {
                 .with_columns([
                     col("FA").fa().ecn().alias("ECN"),
                     col("FA").fa().mass().alias("Mass"),
-                    col("FA")
-                        .fa()
-                        .rcooch3()
-                        .mass()
-                        .alias("MethylEsterMass"),
+                    col("FA").fa().rcooch3().mass().alias("MethylEsterMass"),
                     col("FA").fa().rcoo().mass().alias("RCOOMass"),
                     // col("Time").list().mean().alias("Mean"),
                     // col("Time").list().std(0).alias("StandardDeviation"),
