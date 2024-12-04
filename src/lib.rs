@@ -15,9 +15,10 @@ mod test {
     use polars::prelude::*;
     use ron::{extensions::Extensions, ser::PrettyConfig};
     use special::polars::{ExprExt, Mass as _};
-    use std::{fs::write, iter::empty};
+    use std::{fs::write, iter::empty, path::Path};
+    use walkdir::WalkDir;
 
-    fn format(path: &str) -> Result<()> {
+    fn format(path: &Path) -> Result<()> {
         let source = std::fs::read_to_string(path)?;
         let data_frame: DataFrame = ron::de::from_str(&source)?;
         let formated = ron::ser::to_string_pretty(
@@ -25,7 +26,7 @@ mod test {
             PrettyConfig::default().extensions(Extensions::IMPLICIT_SOME),
         )?;
         if source != formated {
-            std::fs::copy(path, format!("{path}.bk"))?;
+            // std::fs::copy(path, format!("{path}.bk"))?;
             std::fs::write(path, formated)?;
         }
         Ok(())
@@ -33,7 +34,14 @@ mod test {
 
     #[test]
     fn test_format() -> Result<()> {
-        format("input/data/60.1.ron")
+        for entry in WalkDir::new("input/data/") {
+            let entry = entry?;
+            if entry.metadata()?.is_file() {
+                println!("{}", entry.path().display());
+                format(entry.path())?;
+            }
+        }
+        Ok(())
     }
 
     // Series::from_iter([fatty_acid!(16).mass(), fatty_acid!(14).mass(), fatty_acid!(18).mass()])

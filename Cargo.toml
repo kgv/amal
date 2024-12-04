@@ -44,6 +44,7 @@ ron = "0.8.1"
 serde = { version = "1.0.215", features = ["derive"] }
 tracing = "0.1.41"
 uom = { version = "0.36.0", features = ["serde"] }
+walkdir = "2.5.0"
 
 # native
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
