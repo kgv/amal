@@ -1,4 +1,4 @@
-pub(crate) use self::{difference::Pane as DifferencePane, source::Pane as SourcePane};
+pub(crate) use self::{distance::Pane as DistancePane, source::Pane as SourcePane};
 
 use egui::Ui;
 use egui_phosphor::regular::{CHART_BAR, TABLE};
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) enum Pane {
     Source(SourcePane),
-    Difference(DifferencePane),
+    Distance(DistancePane),
 }
 
 impl Pane {
@@ -17,28 +17,28 @@ impl Pane {
         Self::Source(SourcePane::new(data_frame))
     }
 
-    pub(crate) fn difference(data_frame: DataFrame) -> Self {
-        Self::Difference(DifferencePane::new(data_frame))
+    pub(crate) fn distance(data_frame: DataFrame) -> Self {
+        Self::Distance(DistancePane::new(data_frame))
     }
 
     pub(crate) const fn icon(&self) -> &str {
         match self {
             Self::Source(_) => CHART_BAR,
-            Self::Difference(_) => TABLE,
+            Self::Distance(_) => TABLE,
         }
     }
 
     pub(crate) const fn title(&self) -> &'static str {
         match self {
             Self::Source(_) => "Source",
-            Self::Difference(_) => "Difference",
+            Self::Distance(_) => "Distance",
         }
     }
 
     pub(crate) const fn data_frame(&self) -> &DataFrame {
         match self {
             Self::Source(pane) => &pane.target,
-            Self::Difference(pane) => &pane.target,
+            Self::Distance(pane) => &pane.target,
         }
     }
 }
@@ -47,19 +47,19 @@ impl Pane {
     fn header(&mut self, ui: &mut Ui) {
         match self {
             Self::Source(pane) => pane.header(ui),
-            Self::Difference(pane) => pane.header(ui),
+            Self::Distance(pane) => pane.header(ui),
         }
     }
 
     fn content(&mut self, ui: &mut Ui) {
         match self {
             Self::Source(pane) => pane.content(ui),
-            Self::Difference(pane) => pane.content(ui),
+            Self::Distance(pane) => pane.content(ui),
         }
     }
 }
 
 pub(crate) mod behavior;
-pub(crate) mod difference;
+pub(crate) mod distance;
 pub(crate) mod source;
 pub(crate) mod widgets;

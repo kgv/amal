@@ -1,7 +1,7 @@
-use self::panes::{behavior::Behavior, DifferencePane, Pane};
-use crate::utils::{TilesExt, TreeExt};
+use self::panes::{behavior::Behavior, Pane};
+use crate::utils::{ TreeExt};
 use anyhow::Result;
-use data::{Data, Format};
+use data::{Data, };
 use eframe::{get_value, set_value, APP_KEY};
 use egui::{
     menu::bar, warn_if_debug_build, Align, Align2, CentralPanel, Color32, DroppedFile,
@@ -121,7 +121,7 @@ impl App {
                         self.tree
                             .insert_pane(Pane::source(self.data.data_frame.clone()));
                         self.tree
-                            .insert_pane(Pane::difference(self.data.data_frame.clone()));
+                            .insert_pane(Pane::distance(self.data.data_frame.clone()));
                         trace!(?self.data);
                     }
                     Err(error) => {

@@ -1,7 +1,7 @@
 pub(crate) use self::{
-    difference::{Computed as DifferenceComputed, Key as DifferenceKey},
+    distance::{Computed as DistanceComputed, Key as DistanceKey},
     source::{Computed as SourceComputed, Key as SourceKey},
 };
 
-pub(crate) mod difference;
+pub(crate) mod distance;
 pub(crate) mod source;

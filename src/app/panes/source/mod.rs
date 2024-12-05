@@ -57,27 +57,6 @@ impl Pane {
                     error!(%error);
                 }
             }
-            if ui.button("CSV").clicked() {
-                println!("data_fram: {}", self.target);
-                let data_frame = self
-                    .target
-                    .clone()
-                    .lazy()
-                    .select([
-                        col("Mode").struct_().field_by_names(["*"]),
-                        col("Time")
-                            .struct_()
-                            .field_by_names(["Mean", "StandardDeviation"])
-                            .name()
-                            .prefix("Time"),
-                        col("ECL"),
-                        col("FCL"),
-                        col("ECN"),
-                    ])
-                    .collect()
-                    .unwrap();
-                crate::app::data::save("df.csv", Format::Csv, &data_frame).unwrap();
-            }
             if ui.button("RON").clicked() {
                 if let Err(error) = self.save("df.ron", Format::Ron) {
                     error!(%error);

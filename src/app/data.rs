@@ -97,29 +97,23 @@ impl Default for Data {
 pub(crate) enum Format {
     #[default]
     Bin,
-    Csv,
     Ron,
 }
 
 pub(crate) fn save(path: impl AsRef<Path>, format: Format, data_frame: &DataFrame) -> Result<()> {
     match format {
         Format::Bin => {
+            println!("data_frame: {:#?}", data_frame.schema());
             let contents = bincode::serialize(&data_frame)?;
             write(path, contents)?;
         }
         Format::Ron => {
+            println!("data_frame: {:#?}", data_frame.schema());
             let contents = ron::ser::to_string_pretty(
                 &data_frame,
                 PrettyConfig::default().extensions(Extensions::IMPLICIT_SOME),
             )?;
             write(path, contents)?;
-        }
-        Format::Csv => {
-            let mut file = File::create(path)?;
-            CsvWriter::new(&mut file)
-                .include_header(true)
-                .with_separator(b',')
-                .finish(&mut data_frame.clone())?;
         }
     }
     Ok(())
