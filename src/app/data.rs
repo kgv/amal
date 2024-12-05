@@ -4,7 +4,7 @@ use ron::{extensions::Extensions, ser::PrettyConfig};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display, Formatter},
-    fs::write,
+    fs::{write, File},
     path::Path,
 };
 
@@ -14,26 +14,6 @@ pub(crate) struct Data {
 }
 
 impl Data {
-    pub(crate) fn save(&self, path: impl AsRef<Path>, format: Format) -> Result<()> {
-        let data_frame =
-            self.data_frame
-                .select(["FA", "OnsetTemperature", "TemperatureStep", "Time"])?;
-        match format {
-            Format::Bin => {
-                let contents = bincode::serialize(&data_frame)?;
-                write(path, contents)?;
-            }
-            Format::Ron => {
-                let contents = ron::ser::to_string_pretty(
-                    &data_frame,
-                    PrettyConfig::default().extensions(Extensions::IMPLICIT_SOME),
-                )?;
-                write(path, contents)?;
-            }
-        }
-        Ok(())
-    }
-
     pub(crate) fn stack(&mut self, data_frame: &DataFrame) -> Result<()> {
         // If many vstack operations are done, it is recommended to call DataFrame::align_chunks_par
         self.data_frame.vstack_mut(&data_frame)?.align_chunks_par();
@@ -113,9 +93,34 @@ impl Default for Data {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub(crate) enum Format {
     #[default]
     Bin,
+    Csv,
     Ron,
+}
+
+pub(crate) fn save(path: impl AsRef<Path>, format: Format, data_frame: &DataFrame) -> Result<()> {
+    match format {
+        Format::Bin => {
+            let contents = bincode::serialize(&data_frame)?;
+            write(path, contents)?;
+        }
+        Format::Ron => {
+            let contents = ron::ser::to_string_pretty(
+                &data_frame,
+                PrettyConfig::default().extensions(Extensions::IMPLICIT_SOME),
+            )?;
+            write(path, contents)?;
+        }
+        Format::Csv => {
+            let mut file = File::create(path)?;
+            CsvWriter::new(&mut file)
+                .include_header(true)
+                .with_separator(b',')
+                .finish(&mut data_frame.clone())?;
+        }
+    }
+    Ok(())
 }

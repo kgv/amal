@@ -1,64 +1,65 @@
-use self::{
-    behavior::Behavior,
-    plot::PlotPane,
-    settings::{Settings, Sort, TimeUnits},
-    table::TablePane,
-};
-use crate::app::MAX_PRECISION;
-use egui::{ComboBox, DragValue, Ui};
+pub(crate) use self::{difference::Pane as DifferencePane, source::Pane as SourcePane};
+
+use egui::Ui;
 use egui_phosphor::regular::{CHART_BAR, TABLE};
-use egui_tiles::TileId;
 use polars::frame::DataFrame;
 use serde::{Deserialize, Serialize};
 
 /// Pane
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) enum Pane {
-    Plot(PlotPane),
-    Table(TablePane),
+    Source(SourcePane),
+    Difference(DifferencePane),
 }
 
 impl Pane {
+    pub(crate) fn source(data_frame: DataFrame) -> Self {
+        Self::Source(SourcePane::new(data_frame))
+    }
+
+    pub(crate) fn difference(data_frame: DataFrame) -> Self {
+        Self::Difference(DifferencePane::new(data_frame))
+    }
+
     pub(crate) const fn icon(&self) -> &str {
         match self {
-            Self::Plot(_) => CHART_BAR,
-            Self::Table(_) => TABLE,
+            Self::Source(_) => CHART_BAR,
+            Self::Difference(_) => TABLE,
         }
     }
 
     pub(crate) const fn title(&self) -> &'static str {
         match self {
-            Self::Plot(_) => "Plot",
-            Self::Table(_) => "Table",
+            Self::Source(_) => "Source",
+            Self::Difference(_) => "Difference",
         }
     }
 
     pub(crate) const fn data_frame(&self) -> &DataFrame {
         match self {
-            Self::Plot(plot) => &plot.data_frame,
-            Self::Table(table) => &table.target,
+            Self::Source(pane) => &pane.target,
+            Self::Difference(pane) => &pane.target,
         }
     }
 }
 
 impl Pane {
-    pub(crate) fn ui(&mut self, ui: &mut Ui) {
+    fn header(&mut self, ui: &mut Ui) {
         match self {
-            Self::Plot(plot) => plot.ui(ui),
-            Self::Table(table) => table.ui(ui),
+            Self::Source(pane) => pane.header(ui),
+            Self::Difference(pane) => pane.header(ui),
         }
     }
 
-    // pub(crate) fn settings(&mut self, ui: &mut Ui) {
-    //     match self {
-    //         Self::Plot(plot) => plot.settings.ui(ui),
-    //         Self::Table(table) => table.settings.ui(ui),
-    //     }
-    // }
+    fn content(&mut self, ui: &mut Ui) {
+        match self {
+            Self::Source(pane) => pane.content(ui),
+            Self::Difference(pane) => pane.content(ui),
+        }
+    }
 }
 
 pub(crate) mod behavior;
-pub(crate) mod plot;
-pub(crate) mod settings;
-pub(crate) mod table;
+pub(crate) mod difference;
+pub(crate) mod source;
 pub(crate) mod widgets;

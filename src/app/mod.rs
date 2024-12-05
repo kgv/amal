@@ -1,5 +1,5 @@
-use self::panes::{behavior::Behavior, table::TablePane, Pane};
-use crate::utils::TreeExt;
+use self::panes::{behavior::Behavior, DifferencePane, Pane};
+use crate::utils::{TilesExt, TreeExt};
 use anyhow::Result;
 use data::{Data, Format};
 use eframe::{get_value, set_value, APP_KEY};
@@ -115,10 +115,13 @@ impl App {
                     Ok(data_frame) => {
                         trace!(?data_frame);
                         self.data.stack(&data_frame).unwrap();
-                        self.tree.insert_pane(Pane::Table(TablePane::new(
-                            self.data.data_frame.clone(),
-                            Default::default(),
-                        )));
+                        if !self.tree.tiles.is_empty() {
+                            self.tree = Tree::empty("tree");
+                        }
+                        self.tree
+                            .insert_pane(Pane::source(self.data.data_frame.clone()));
+                        self.tree
+                            .insert_pane(Pane::difference(self.data.data_frame.clone()));
                         trace!(?self.data);
                     }
                     Err(error) => {
@@ -170,10 +173,7 @@ impl App {
             .frame(egui::Frame::side_top_panel(&ctx.style()))
             .resizable(true)
             .show_animated(ctx, self.left_panel, |ui| {
-                ScrollArea::vertical().show(ui, |ui| {
-                    // self.behavior.settings(ui, &mut self.tree);
-                    ui.separator();
-                });
+                ScrollArea::vertical().show(ui, |ui| {});
             });
     }
 
@@ -254,41 +254,6 @@ impl App {
                 }
                 //
                 ui.separator();
-                // Save
-                ui.menu_button(icon!(FLOPPY_DISK), |ui| {
-                    if ui.button("RON").clicked() {
-                        for tile_id in self.tree.active_tiles() {
-                            if let Some(tile) = self.tree.tiles.get(tile_id) {
-                                match tile {
-                                    Tile::Pane(pane) => {
-                                        Data {
-                                            data_frame: pane.data_frame().clone(),
-                                        }
-                                        .save("df.msv.ron", Format::Ron)
-                                        .unwrap();
-                                    }
-                                    Tile::Container(container) => {}
-                                }
-                            }
-                        }
-                    }
-                    if ui.button("BIN").clicked() {
-                        for tile_id in self.tree.active_tiles() {
-                            if let Some(tile) = self.tree.tiles.get(tile_id) {
-                                match tile {
-                                    Tile::Pane(pane) => {
-                                        Data {
-                                            data_frame: pane.data_frame().clone(),
-                                        }
-                                        .save("df.msv.bin", Format::Ron)
-                                        .unwrap();
-                                    }
-                                    Tile::Container(container) => {}
-                                }
-                            }
-                        }
-                    }
-                });
                 {
                     // for tile_id in self.tree.active_tiles() {
                     //     if let Some(root) = self.tree.root() {

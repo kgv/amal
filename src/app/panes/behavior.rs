@@ -1,11 +1,8 @@
-use super::{plot::PlotPane, table::TablePane, Pane};
-use crate::{
-    app::{icon, localize},
-    utils::ContainerExt,
-};
-use egui::{menu::bar, CollapsingHeader, CursorIcon, RichText, Ui, WidgetText};
-use egui_phosphor::regular::{CHART_BAR, LINK, TABLE, X};
-use egui_tiles::{Tile, TileId, Tiles, Tree, UiResponse};
+use super::Pane;
+use crate::utils::ContainerExt;
+use egui::{CursorIcon, Frame, Margin, RichText, Sides, Ui, WidgetText};
+use egui_phosphor::regular::X;
+use egui_tiles::{Tile, TileId, Tiles, UiResponse};
 use serde::{Deserialize, Serialize};
 
 const SIZE: f32 = 16.0;
@@ -15,64 +12,6 @@ const SIZE: f32 = 16.0;
 pub(crate) struct Behavior {
     pub(crate) close: Option<TileId>,
     pub(crate) click: Option<TileId>,
-}
-
-impl Behavior {
-    pub(crate) fn settings(&mut self, ui: &mut Ui, tree: &mut Tree<Pane>) {
-        ui.separator();
-        for tile_id in tree.active_tiles() {
-            if let Some(Tile::Pane(pane)) = tree.tiles.get_mut(tile_id) {
-                ui.visuals_mut().collapsing_header_frame = true;
-                let open = self
-                    .click
-                    .take_if(|toggle| *toggle == tile_id)
-                    .map(|tile_id| {
-                        let id = ui.make_persistent_id(tile_id);
-                        ui.data_mut(|data| {
-                            let open = data.get_persisted_mut_or_default::<bool>(id);
-                            *open = !*open;
-                            *open
-                        })
-                    });
-                CollapsingHeader::new(RichText::new(pane.title()).heading())
-                    .open(open)
-                    .show(ui, |ui| {
-                        let text = match pane {
-                            Pane::Plot(_) => TABLE,
-                            Pane::Table(_) => CHART_BAR,
-                        };
-                        if ui
-                            .button(icon!(text).size(16.0))
-                            .on_hover_text(localize!("table"))
-                            .clicked()
-                        {
-                            // *pane = match pane {
-                            //     Pane::Plot(PlotPane {
-                            //         data_frame,
-                            //         settings,
-                            //     }) => Pane::Table(TablePane {
-                            //         data_frame: data_frame.clone(),
-                            //         settings: *settings,
-                            //     }),
-                            //     Pane::Table(TablePane {
-                            //         data_frame,
-                            //         settings,
-                            //     }) => Pane::Plot(PlotPane {
-                            //         data_frame: data_frame,
-                            //         settings: settings,
-                            //     }),
-                            // };
-                            // if let Some(id) = self.tree.iter {
-                            //     // if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                            //     //     container.set_kind(ContainerKind::Tabs);
-                            //     // }
-                            // }
-                        }
-                        // pane.settings(ui);
-                    });
-            }
-        }
-    }
 }
 
 impl egui_tiles::Behavior<Pane> for Behavior {
@@ -98,25 +37,33 @@ impl egui_tiles::Behavior<Pane> for Behavior {
     }
 
     fn pane_ui(&mut self, ui: &mut Ui, tile_id: TileId, pane: &mut Pane) -> UiResponse {
-        let response = ui
-            .horizontal(|ui| {
-                let response = ui.heading(pane.title()).on_hover_cursor(CursorIcon::Grab);
-                ui.add_space(ui.available_width() - ui.spacing().button_padding.x - SIZE);
-                ui.visuals_mut().button_frame = false;
-                if ui.button(RichText::new(X)).clicked() {
-                    self.close = Some(tile_id);
+        Frame::none()
+            .inner_margin(Margin::symmetric(4.0, 2.0))
+            .show(ui, |ui| {
+                let response = Sides::new()
+                    .show(
+                        ui,
+                        |ui| {
+                            let response =
+                                ui.heading(pane.title()).on_hover_cursor(CursorIcon::Grab);
+                            pane.header(ui);
+                            response
+                        },
+                        |ui| {
+                            ui.visuals_mut().button_frame = false;
+                            if ui.button(RichText::new(X).heading()).clicked() {
+                                self.close = Some(tile_id);
+                            }
+                        },
+                    )
+                    .0;
+                pane.content(ui);
+                if response.dragged() {
+                    UiResponse::DragStarted
+                } else {
+                    UiResponse::None
                 }
-                response
             })
-            .inner;
-        if response.clicked() {
-            self.click = Some(tile_id);
-        }
-        pane.ui(ui);
-        if response.dragged() {
-            UiResponse::DragStarted
-        } else {
-            UiResponse::None
-        }
+            .inner
     }
 }

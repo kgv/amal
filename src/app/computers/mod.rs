@@ -1,3 +1,7 @@
-pub(crate) use self::table::{Computed as TableComputed, Key as TableKey};
+pub(crate) use self::{
+    difference::{Computed as DifferenceComputed, Key as DifferenceKey},
+    source::{Computed as SourceComputed, Key as SourceKey},
+};
 
-pub(crate) mod table;
+pub(crate) mod difference;
+pub(crate) mod source;
