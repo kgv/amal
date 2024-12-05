@@ -1,15 +1,12 @@
 use crate::{
-    app::panes::distance::settings::{Settings, Sort, SortBy},
-    special::polars::{ExprExt as _, Mass as _, Rcooh},
+    app::panes::distance::settings::{Settings, SortBy},
+    special::polars::{ExprExt as _, Mass as _},
 };
 use egui::{
     emath::Float,
     util::cache::{ComputerMut, FrameCache},
 };
-use polars::{
-    lazy::dsl::{max_horizontal, min_horizontal},
-    prelude::*,
-};
+use polars::prelude::*;
 use std::hash::{Hash, Hasher};
 
 /// Distance computed

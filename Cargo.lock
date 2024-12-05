@@ -188,6 +188,7 @@ dependencies = [
  "egui_tiles",
  "getrandom",
  "itertools",
+ "log",
  "molecule",
  "polars",
  "ron",
