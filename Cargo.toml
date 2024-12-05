@@ -2,7 +2,7 @@
 edition = "2021"
 name = "amal"
 rust-version = "1.76"
-version = "0.0.5"
+version = "0.1.6"
 
 [dependencies]
 anyhow = "1.0.94"
@@ -32,7 +32,7 @@ polars = { version = "0.44.2", features = [
     "dtype-struct",
     "dtype-u16",
     "dtype-u8",
-    "fmt_no_tty",
+    # "fmt_no_tty",
     "iejoin",
     "is_between",
     "lazy",

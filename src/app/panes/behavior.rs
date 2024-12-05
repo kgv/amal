@@ -5,8 +5,6 @@ use egui_phosphor::regular::X;
 use egui_tiles::{Tile, TileId, Tiles, UiResponse};
 use serde::{Deserialize, Serialize};
 
-const SIZE: f32 = 16.0;
-
 /// Behavior
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub(crate) struct Behavior {

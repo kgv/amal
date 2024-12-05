@@ -16,54 +16,86 @@
 
 [Краткое описание функциональных возможностей. Например: Поиск, сортировка, фильтрация, генерация отчетов, экспорт данных в различных форматах.]
 
-== Основные технические характеристики
+Фильтрация:
 
-[Описание типов данных, хранящихся в базе. Например: Текстовые документы, изображения, аудиофайлы, персональные данные (если применимо), статистические данные и т.д. Указать примерное количество самостоятельных информационных элементов (не менее 10 000).]
+* По режиму эксперимента
+* По жирным кислотам
+
+Сортировка:
+
+* По времени удерживания
+* По разнице времен удерживания
+* По эквивалентной длине цепи
+* По разнице эквивалентных длин цепей
+
+Форматы экспорта данных:
+
+* "RON" - Rusty Object Notation,
+* "BIN" - бинарный фрормат сериализации/десериализации.
+
+== Основные технические характеристики
 
 Таблица измерений.
 
+Количество записей в таблице: 3600
+
 Схема таблицы:
-Index: UInt32,
-Mode: Struct
-    OnsetTemperature: Float64,
-    TemperatureStep: Float64,
-FA: Struct
-    Carbons: UInt8,
-    Indices: List(UInt8),
-    Bounds: List(Int8),
-    Label: String,
-Time: Struct
-    Mean: Float64,
-    StandardDeviation: Float64,
-    Values: List(Float64),
-    Relative: Float64,
-ECL: Float64,
-FCL: Float64,
-ECN: Int64,
-Mass: Struct
-    RCOOH: Float64,
-    RCOO: Float64,
-    RCOOCH3: Float64,
+
+* Index: UInt32,
+* Mode: Struct
+** OnsetTemperature: Float64,
+** TemperatureStep: Float64,
+* FA: Struct
+** Carbons: UInt8,
+** Indices: List(UInt8),
+** Bounds: List(Int8),
+** Label: String,
+* Time: Struct
+** Mean: Float64,
+** StandardDeviation: Float64,
+** Values: List(Float64),
+** Relative: Float64,
+* ECL: Float64,
+* FCL: Float64,
+* ECN: Int64,
+* Mass: Struct
+** RCOOH: Float64,
+** RCOO: Float64,
+** RCOOCH3: Float64.
 
 Таблица дистанций.
 
+Количество записей в таблице: 63000
+
 Схема таблицы:
-Index: UInt32,
-Mode: Struct
-    OnsetTemperature: Float64,
-    TemperatureStep: Float64,
-From: Struct
-    Carbons: UInt8,
-    Indices: List(UInt8),
-    Bounds: List(Int8),
-    Label: String,
-To: Struct
-    Carbons: UInt8,
-    Indices: List(UInt8),
-    Bounds: List(Int8),
-    Label: String,
-Time: Float64,
-ECL: Float64.
+
+* Index: UInt32,
+* Mode: Struct
+** OnsetTemperature: Float64,
+** TemperatureStep: Float64,
+* From: Struct
+** Carbons: UInt8,
+** Indices: List(UInt8),
+** Bounds: List(Int8),
+** Label: String,
+* To: Struct
+** Carbons: UInt8,
+** Indices: List(UInt8),
+** Bounds: List(Int8),
+** Label: String,
+* Time: Float64,
+* ECL: Float64.
+
+Описание столбцов:
+
+* Index - индекс записи в таблице
+* Mode - режим проведения эксперимента (начальная температура, шаг градиента температуры)
+* FA, From, To - идентификаторы жирной кислоты (количество атомов удлерода, индексы ненасыщенных связей, спецификаторы связей, имя)
+* Time - время удержания (среднее время удержания, стандартное отклонение времени удержания,  относительное время удержания)
+* ECL - эквивалентная длина цепи
+* FCL - фракционная длина цепи
+* ECN - эквивалентная углнродное число
+* Mass - масса жирной кислоты (масса ацилов жирной кислоты: RCOOH, RCOO, RCOOCH3)
 
 == Язык программирования
 
