@@ -197,7 +197,10 @@ impl App {
                     .on_hover_text(localize!("reset_application"))
                     .clicked()
                 {
-                    *self = Default::default();
+                    *self = Self {
+                        reactive: self.reactive,
+                        ..Default::default()
+                    };
                 }
                 ui.separator();
                 if ui
