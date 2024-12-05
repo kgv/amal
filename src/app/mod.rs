@@ -1,7 +1,7 @@
 use self::panes::{behavior::Behavior, Pane};
-use crate::utils::{ TreeExt};
+use crate::utils::TreeExt;
 use anyhow::Result;
-use data::{Data, };
+use data::Data;
 use eframe::{get_value, set_value, APP_KEY};
 use egui::{
     menu::bar, warn_if_debug_build, Align, Align2, CentralPanel, Color32, DroppedFile,
@@ -120,8 +120,8 @@ impl App {
                         }
                         self.tree
                             .insert_pane(Pane::source(self.data.data_frame.clone()));
-                        self.tree
-                            .insert_pane(Pane::distance(self.data.data_frame.clone()));
+                        // self.tree
+                        //     .insert_pane(Pane::distance(self.data.data_frame.clone()));
                         trace!(?self.data);
                     }
                     Err(error) => {
@@ -252,71 +252,7 @@ impl App {
                         }
                     }
                 }
-                //
                 ui.separator();
-                {
-                    // for tile_id in self.tree.active_tiles() {
-                    //     if let Some(root) = self.tree.root() {
-                    //         self.tree.
-                    //         match tile {
-                    //             Tile::Pane(pane) => {
-                    //                 pane.title();
-                    //                 pane.data_frame();
-                    //             }
-                    //             Tile::Container(container) => todo!(),
-                    //         }
-                    //     }
-                    // }
-                    // if let Err(error) = self.data.save("df.utca.ron") {
-                    //     error!(%error);
-                    // }
-                }
-                ui.separator();
-                // ui.visuals_mut().button_frame = false;
-                // global_dark_light_mode_switch(ui);
-                // ui.separator();
-                // if ui
-                //     .add(Button::new(RichText::new("🗑")))
-                //     .on_hover_text("Reset data")
-                //     .clicked()
-                // {
-                //     *self = Default::default();
-                // }
-                // // Reset gui
-                // if ui
-                //     .add(Button::new(RichText::new("🔃")))
-                //     .on_hover_text("Reset gui")
-                //     .clicked()
-                // {
-                //     ui.with_visuals(|ui, _| ui.memory_mut(|memory| *memory = Default::default()));
-                // }
-                // // Organize windows
-                // if ui
-                //     .add(Button::new(RichText::new("▣")))
-                //     .on_hover_text("Organize windows")
-                //     .clicked()
-                // {
-                //     ui.ctx().memory_mut(|memory| memory.reset_areas());
-                // }
-                // ui.separator();
-                // let mut central_tab = |tab| {
-                //     let found = self.dock.find_tab(&tab);
-                //     if ui
-                //         .selectable_label(found.is_some(), tab.sign())
-                //         .on_hover_text(tab.to_string())
-                //         .clicked()
-                //     {
-                //         if let Some(index) = found {
-                //             self.dock.remove_tab(index);
-                //         } else {
-                //             self.dock.push_to_focused_leaf(tab);
-                //         }
-                //     }
-                // };
-                // // Table
-                // central_tab(CentralTab::Table);
-                // // Plot
-                // central_tab(CentralTab::Plot);
             });
         });
     }
