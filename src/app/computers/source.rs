@@ -34,24 +34,24 @@ impl Computer {
             ])
             .alias("Time"),
         ]);
-        // // Relative time, ECL, ECN, Mass
-        // lazy_frame = lazy_frame
-        //     .with_columns([
-        //         col("Time")
-        //             .struct_()
-        //             .with_fields(vec![relative_time().over(["Mode"]).alias("Relative")])?,
-        //         ecl().over(["Mode"]).alias("ECL"),
-        //     ])
-        //     .with_columns([
-        //         (col("ECL") - col("FA").fa().c()).alias("FCL"),
-        //         col("FA").fa().ecn().alias("ECN"),
-        //         as_struct(vec![
-        //             col("FA").fa().mass().alias("RCOOH"),
-        //             col("FA").fa().rcoo().mass().alias("RCOO"),
-        //             col("FA").fa().rcooch3().mass().alias("RCOOCH3"),
-        //         ])
-        //         .alias("Mass"),
-        //     ]);
+        // Relative time, ECL, ECN, Mass
+        lazy_frame = lazy_frame
+            .with_columns([
+                col("Time")
+                    .struct_()
+                    .with_fields(vec![relative_time().over(["Mode"]).alias("Relative")])?,
+                ecl().over(["Mode"]).alias("ECL"),
+            ])
+            .with_columns([
+                (col("ECL") - col("FA").fa().c()).alias("FCL"),
+                col("FA").fa().ecn().alias("ECN"),
+                as_struct(vec![
+                    col("FA").fa().mass().alias("RCOOH"),
+                    col("FA").fa().rcoo().mass().alias("RCOO"),
+                    col("FA").fa().rcooch3().mass().alias("RCOOCH3"),
+                ])
+                .alias("Mass"),
+            ]);
         // Filter
         if !key.settings.filter.fatty_acids.is_empty() {
             let mut expr = lit(false);

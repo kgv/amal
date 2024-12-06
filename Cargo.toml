@@ -21,9 +21,11 @@ egui_plot = "0.29.0"
 egui_table = "0.1.0"
 egui_tiles = "0.10.1"
 itertools = "0.13.0"
-# https://github.com/pola-rs/polars/issues/17192
+log = "0.4.22"
 molecule = { git = "https://github.com/ippras/molecule" }
-polars = { version = "0.44.2", features = [
+# https://github.com/pola-rs/polars/issues/17192
+# polars = { version = "0.44.2", features = [
+polars = { git = "https://github.com/coastalwhite/polars", branch = "fix/32bit-row-encoding", features = [
     "abs",
     "cross_join",
     "diagonal_concat",
@@ -47,7 +49,6 @@ serde = { version = "1.0.215", features = ["derive"] }
 tracing = "0.1.41"
 uom = { version = "0.36.0", features = ["serde"] }
 walkdir = "2.5.0"
-log = "0.4.22"
 
 # native
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

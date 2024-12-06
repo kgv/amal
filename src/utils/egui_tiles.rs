@@ -1,7 +1,6 @@
-use std::iter::once;
-
 use egui_tiles::{Container, Tile, TileId, Tiles, Tree};
 use itertools::Either;
+use std::iter::once;
 
 /// [`Container`] extension methods
 pub trait ContainerExt {
