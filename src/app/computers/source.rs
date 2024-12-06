@@ -53,6 +53,22 @@ impl Computer {
                 .alias("Mass"),
             ]);
         // Filter
+        if let Some(onset_temperature) = key.settings.filter.mode.onset_temperature {
+            lazy_frame = lazy_frame.filter(
+                col("Mode")
+                    .struct_()
+                    .field_by_name("OnsetTemperature")
+                    .eq(lit(onset_temperature)),
+            );
+        }
+        if let Some(temperature_step) = key.settings.filter.mode.temperature_step {
+            lazy_frame = lazy_frame.filter(
+                col("Mode")
+                    .struct_()
+                    .field_by_name("TemperatureStep")
+                    .eq(lit(temperature_step)),
+            );
+        }
         if !key.settings.filter.fatty_acids.is_empty() {
             let mut expr = lit(false);
             for fatty_acid in &key.settings.filter.fatty_acids {
@@ -105,10 +121,20 @@ impl Computer {
         };
         lazy_frame = match key.settings.sort {
             Sort::Mode => lazy_frame.sort_by_exprs(&[col("Mode"), col("FA")], sort_options),
-            Sort::Ecl => lazy_frame.sort_by_exprs(&[col("ECL").over([col("Mode")])], sort_options),
-            Sort::Time => {
-                lazy_frame.sort_by_exprs(&[col("Time").over([col("Mode")])], sort_options)
+            Sort::Ecl => {
+                lazy_frame.sort_by_exprs(&[col("ECL").max().over([col("Mode")])], sort_options)
             }
+            Sort::Time => lazy_frame.sort_by_exprs(
+                &[
+                    col("Time")
+                        .struct_()
+                        .field_by_name("Mean")
+                        .max()
+                        .over([col("Mode")]),
+                    col("Time"),
+                ],
+                sort_options,
+            ),
         };
         // Index
         lazy_frame = lazy_frame.cache().with_row_index("Index", None);
@@ -162,10 +188,7 @@ impl Hash for Key<'_> {
         // }
 
         self.settings.filter.hash(state);
-        self.settings.filter_onset_temperature.hash(state);
-        self.settings.filter_temperature_step.hash(state);
         self.settings.interpolate.hash(state);
-        self.settings.interpolation.hash(state);
         self.settings.sort.hash(state);
         self.settings.order.hash(state);
     }
