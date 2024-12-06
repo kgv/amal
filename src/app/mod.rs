@@ -218,7 +218,10 @@ impl App {
                 }
                 ui.separator();
                 ui.menu_button(RichText::new(DATABASE).size(SIZE), |ui| {
-                    if ui.button("IPPRAS/Agilent").clicked() {
+                    if ui
+                        .button(RichText::new(format!("{DATABASE} IPPRAS/Agilent")).heading())
+                        .clicked()
+                    {
                         let data_frame = bincode::deserialize(AGILENT).unwrap();
                         self.tree.insert_pane(Pane::source(data_frame));
                         let data_frame: DataFrame = bincode::deserialize(AGILENT).unwrap();
