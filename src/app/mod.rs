@@ -12,20 +12,16 @@ use egui_ext::{DroppedFileExt, HoveredFileExt, LightDarkButton};
 use egui_phosphor::{
     add_to_fonts,
     regular::{
-        ARROWS_CLOCKWISE, FLOPPY_DISK, GRID_FOUR, ROCKET, SIDEBAR_SIMPLE, SQUARE_SPLIT_HORIZONTAL,
-        SQUARE_SPLIT_VERTICAL, TABLE, TABS, TRASH,
+        ARROWS_CLOCKWISE, DATABASE, FLOPPY_DISK, GRID_FOUR, ROCKET, SIDEBAR_SIMPLE,
+        SQUARE_SPLIT_HORIZONTAL, SQUARE_SPLIT_VERTICAL, TABLE, TABS, TRASH,
     },
     Variant,
 };
-use egui_tiles::{ContainerKind, Tile, Tree};
-use polars::{df, frame::DataFrame, prelude::DataFrameJoinOps};
+use egui_tiles::{ContainerKind, Tile, Tiles, Tree};
+use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Write, str, time::Duration};
 use tracing::{error, info, trace};
-
-macro icon($icon:expr) {
-    RichText::new($icon).size(SIZE)
-}
 
 macro localize($text:literal) {
     $text
@@ -35,6 +31,7 @@ macro localize($text:literal) {
 const MAX_PRECISION: usize = 16;
 const _NOTIFICATIONS_DURATION: Duration = Duration::from_secs(15);
 const SIZE: f32 = 32.0;
+const AGILENT: &[u8] = include_bytes!("../../assets/agilent.bin");
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
@@ -120,8 +117,21 @@ impl App {
                         }
                         self.tree
                             .insert_pane(Pane::source(self.data.data_frame.clone()));
-                        // self.tree
-                        //     .insert_pane(Pane::distance(self.data.data_frame.clone()));
+                        self.tree
+                            .insert_pane(Pane::distance(self.data.data_frame.clone()));
+                        // let mut tiles = Tiles::default();
+                        // // let mut children = vec![];
+                        // // let tile_id = tiles.insert_pane(Pane::source(self.data.data_frame.clone()));
+                        // // children.push(tile_id);
+                        // // let tile_id =
+                        // //     tiles.insert_pane(Pane::distance(self.data.data_frame.clone()));
+                        // // children.push(tile_id);
+                        // let children = vec![
+                        //     tiles.insert_pane(Pane::source(self.data.data_frame.clone())),
+                        //     tiles.insert_pane(Pane::distance(self.data.data_frame.clone())),
+                        // ];
+                        // let root = self.tree.tiles.insert_tab_tile(children);
+                        // self.tree = Tree::new("tree", root, tiles);
                         trace!(?self.data);
                     }
                     Err(error) => {
@@ -169,31 +179,27 @@ impl App {
 
     // Left panel
     fn left_panel(&mut self, ctx: &egui::Context) {
-        SidePanel::left("left_panel")
-            .frame(egui::Frame::side_top_panel(&ctx.style()))
-            .resizable(true)
-            .show_animated(ctx, self.left_panel, |ui| {
-                ScrollArea::vertical().show(ui, |ui| {});
-            });
+        // SidePanel::left("left_panel")
+        //     .frame(egui::Frame::side_top_panel(&ctx.style()))
+        //     .resizable(true)
+        //     .show_animated(ctx, self.left_panel, |ui| {
+        //         ScrollArea::vertical().show(ui, |ui| {});
+        //     });
     }
 
     // Top panel
     fn top_panel(&mut self, ctx: &egui::Context) {
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             bar(ui, |ui| {
-                // Left panel
-                ui.toggle_value(&mut self.left_panel, icon!(SIDEBAR_SIMPLE))
-                    .on_hover_text(localize!("left_panel"));
-                ui.separator();
                 ui.light_dark_button(SIZE);
                 ui.separator();
-                ui.toggle_value(&mut self.reactive, icon!(ROCKET))
+                ui.toggle_value(&mut self.reactive, RichText::new(ROCKET).size(SIZE))
                     .on_hover_text("reactive")
                     .on_hover_text(localize!("reactive_description_enabled"))
                     .on_disabled_hover_text(localize!("reactive_description_disabled"));
                 ui.separator();
                 if ui
-                    .button(icon!(TRASH))
+                    .button(RichText::new(TRASH).size(SIZE))
                     .on_hover_text(localize!("reset_application"))
                     .clicked()
                 {
@@ -204,15 +210,24 @@ impl App {
                 }
                 ui.separator();
                 if ui
-                    .button(icon!(ARROWS_CLOCKWISE))
+                    .button(RichText::new(ARROWS_CLOCKWISE).size(SIZE))
                     .on_hover_text(localize!("reset_gui"))
                     .clicked()
                 {
                     ui.memory_mut(|memory| *memory = Default::default());
                 }
                 ui.separator();
+                ui.menu_button(RichText::new(DATABASE).size(SIZE), |ui| {
+                    if ui.button("IPPRAS/Agilent").clicked() {
+                        let data_frame = bincode::deserialize(AGILENT).unwrap();
+                        self.tree.insert_pane(Pane::source(data_frame));
+                        let data_frame: DataFrame = bincode::deserialize(AGILENT).unwrap();
+                        self.tree.insert_pane(Pane::distance(data_frame));
+                    }
+                });
+                ui.separator();
                 if ui
-                    .button(icon!(SQUARE_SPLIT_VERTICAL))
+                    .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(SIZE))
                     .on_hover_text(localize!("vertical"))
                     .clicked()
                 {
@@ -223,7 +238,7 @@ impl App {
                     }
                 }
                 if ui
-                    .button(icon!(SQUARE_SPLIT_HORIZONTAL))
+                    .button(RichText::new(SQUARE_SPLIT_HORIZONTAL).size(SIZE))
                     .on_hover_text(localize!("horizontal"))
                     .clicked()
                 {
@@ -234,7 +249,7 @@ impl App {
                     }
                 }
                 if ui
-                    .button(icon!(GRID_FOUR))
+                    .button(RichText::new(GRID_FOUR).size(SIZE))
                     .on_hover_text(localize!("grid"))
                     .clicked()
                 {
@@ -245,7 +260,7 @@ impl App {
                     }
                 }
                 if ui
-                    .button(icon!(TABS))
+                    .button(RichText::new(TABS).size(SIZE))
                     .on_hover_text(localize!("tabs"))
                     .clicked()
                 {

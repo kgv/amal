@@ -40,12 +40,12 @@ impl Pane {
         ui.separator();
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             if ui.button("BIN").clicked() {
-                if let Err(error) = save("df.bin", Format::Bin, &self.target) {
+                if let Err(error) = save("df.bin", Format::Bin, self.target.clone()) {
                     error!(%error);
                 }
             }
             if ui.button("RON").clicked() {
-                if let Err(error) = save("df.ron", Format::Ron, &self.target) {
+                if let Err(error) = save("df.ron", Format::Ron, self.target.clone()) {
                     error!(%error);
                 }
             }

@@ -59,7 +59,7 @@ impl<T> TreeExt<T> for Tree<T> {
                 if let Tile::Container(container) = tile {
                     container.add_child(child);
                 } else {
-                    self.root = Some(self.tiles.insert_vertical_tile(vec![root, child]));
+                    self.root = Some(self.tiles.insert_tab_tile(vec![root, child]));
                 }
             }
         } else {

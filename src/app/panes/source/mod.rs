@@ -39,13 +39,24 @@ impl Pane {
         ui.toggle_value(&mut self.control.open, RichText::new(GEAR).heading());
         ui.separator();
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
+            if ui.button("Parquet").clicked() {
+                if let Err(error) = save("df.parquet", Format::Parquet, self.target.clone()) {
+                    error!(%error);
+                }
+            }
             if ui.button("BIN").clicked() {
-                if let Err(error) = save("df.bin", Format::Bin, &self.target) {
+                println!("self.target: {}", self.target);
+                let lazy_frame = self.target.clone().lazy().select([
+                    col("Mode").struct_().field_by_names(["*"]),
+                    col("FA"),
+                    col("Time").struct_().field_by_name("Values").alias("Time"),
+                ]);
+                if let Err(error) = save("df.bin", Format::Bin, lazy_frame.collect().unwrap()) {
                     error!(%error);
                 }
             }
             if ui.button("RON").clicked() {
-                if let Err(error) = save("df.ron", Format::Ron, &self.target) {
+                if let Err(error) = save("df.ron", Format::Ron, self.target.clone()) {
                     error!(%error);
                 }
             }

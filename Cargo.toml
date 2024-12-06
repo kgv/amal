@@ -2,7 +2,7 @@
 edition = "2021"
 name = "amal"
 rust-version = "1.76"
-version = "0.1.6"
+version = "0.2.2"
 
 [dependencies]
 anyhow = "1.0.94"
@@ -34,12 +34,15 @@ polars = { git = "https://github.com/coastalwhite/polars", branch = "fix/32bit-r
     "dtype-struct",
     "dtype-u16",
     "dtype-u8",
-    # "fmt_no_tty",
     "iejoin",
     "is_between",
     "lazy",
     "list_eval",
     "round_series",
+    #
+    "fmt_no_tty",
+    "parquet",
+    "polars-io",
     "serde",
     # "interpolate",
     # "interpolate_by",

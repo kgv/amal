@@ -21,7 +21,9 @@ pub(crate) struct Settings {
     pub(crate) interpolation: Interpolation,
     pub(crate) filter_onset_temperature: Option<i32>,
     pub(crate) filter_temperature_step: Option<i32>,
+
     pub(crate) sort: Sort,
+    pub(crate) order: Order,
 }
 
 impl Settings {
@@ -37,7 +39,9 @@ impl Settings {
             interpolation: Interpolation::new(),
             filter_onset_temperature: None,
             filter_temperature_step: None,
-            sort: Sort::Time,
+
+            sort: Sort::Mode,
+            order: Order::Descending,
         }
     }
 
@@ -134,6 +138,25 @@ impl Settings {
                     ui.selectable_value(&mut self.sort, Sort::Ecl, "ECL");
                     ui.selectable_value(&mut self.sort, Sort::Time, "Time");
                 });
+            ui.end_row();
+
+            // Order
+            ui.label("Order");
+            ComboBox::from_id_salt(ui.next_auto_id())
+                .selected_text(self.order.text())
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.order, Order::Ascending, Order::Ascending.text())
+                        .on_hover_text(Order::Ascending.hover_text());
+                    ui.selectable_value(
+                        &mut self.order,
+                        Order::Descending,
+                        Order::Descending.text(),
+                    )
+                    .on_hover_text(Order::Descending.hover_text());
+                })
+                .response
+                .on_hover_text(self.order.hover_text());
+            ui.end_row();
         });
     }
 }
@@ -213,6 +236,29 @@ impl Text for Sort {
             Self::Mode => "Mode",
             Self::Time => "Retention time",
             Self::Ecl => "Equivalent carbon number",
+        }
+    }
+}
+
+/// Order
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub(in crate::app) enum Order {
+    Ascending,
+    Descending,
+}
+
+impl Order {
+    pub(in crate::app) fn text(self) -> &'static str {
+        match self {
+            Self::Ascending => "Ascending",
+            Self::Descending => "Descending",
+        }
+    }
+
+    pub(in crate::app) fn hover_text(self) -> &'static str {
+        match self {
+            Self::Ascending => "Dscending",
+            Self::Descending => "Descending",
         }
     }
 }

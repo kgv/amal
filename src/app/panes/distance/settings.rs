@@ -1,5 +1,5 @@
 use crate::{
-    app::localize,
+    app::{localize, MAX_PRECISION},
     special::fa_column::{ColumnExt, FattyAcid},
 };
 use egui::{emath::Float, ComboBox, Grid, Slider, Ui, WidgetText};
@@ -18,36 +18,63 @@ use uom::si::{
 /// Settings
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) struct Settings {
+    pub(crate) precision: usize,
     pub(crate) resizable: bool,
     pub(crate) sticky: usize,
+    pub(crate) truncate: bool,
 
     pub(crate) ddof: u8,
+    pub(crate) sort: Sort,
+    pub(crate) order: Order,
+
     pub(crate) filter: Filter,
     pub(crate) interpolation: Interpolation,
     pub(crate) filter_onset_temperature: Option<i32>,
     pub(crate) filter_temperature_step: Option<i32>,
-    pub(crate) sort: Sort,
 }
 
 impl Settings {
     pub(crate) const fn new() -> Self {
         Self {
+            precision: 2,
             resizable: false,
             sticky: 1,
+            truncate: false,
             ddof: 1,
+            sort: Sort::Ecl,
+            order: Order::Descending,
+
             filter: Filter::new(),
             interpolation: Interpolation::new(),
             filter_onset_temperature: None,
             filter_temperature_step: None,
-            sort: Sort::Time,
         }
     }
 
     pub(crate) fn ui(&mut self, ui: &mut Ui, data_frame: &DataFrame) {
         Grid::new("calculation").show(ui, |ui| {
-            // Sticky
+            // Precision floats
+            ui.label(localize!("precision"));
+            ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
+            ui.end_row();
+
+            // Sticky columns
             ui.label(localize!("sticky"));
             ui.add(Slider::new(&mut self.sticky, 0..=data_frame.width()));
+            ui.end_row();
+
+            // Truncate titles
+            ui.label(localize!("truncate"));
+            ui.checkbox(&mut self.truncate, "");
+            ui.end_row();
+
+            ui.separator();
+            ui.separator();
+            ui.end_row();
+
+            // https://numpy.org/devdocs/reference/generated/numpy.std.html
+            ui.label(localize!("ddof"));
+            ui.add(Slider::new(&mut self.ddof, 0..=2));
             ui.end_row();
 
             ui.separator();
@@ -65,11 +92,6 @@ impl Settings {
                 &mut self.interpolation.onset_temperature,
                 min..=max,
             ));
-            ui.end_row();
-
-            // https://numpy.org/devdocs/reference/generated/numpy.std.html
-            ui.label(localize!("ddof"));
-            ui.add(Slider::new(&mut self.ddof, 0..=2));
             ui.end_row();
 
             ui.label(localize!("temperature-step"));
@@ -116,6 +138,7 @@ impl Settings {
             ui.separator();
             ui.end_row();
 
+            // Sort
             ui.label("Sort");
             ComboBox::from_id_salt(ui.next_auto_id())
                 .selected_text(format!("{:?}", self.sort))
@@ -123,6 +146,25 @@ impl Settings {
                     ui.selectable_value(&mut self.sort, Sort::Ecl, "ECL");
                     ui.selectable_value(&mut self.sort, Sort::Time, "Time");
                 });
+            ui.end_row();
+
+            // Order
+            ui.label("Order");
+            ComboBox::from_id_salt(ui.next_auto_id())
+                .selected_text(self.order.text())
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.order, Order::Ascending, Order::Ascending.text())
+                        .on_hover_text(Order::Ascending.hover_text());
+                    ui.selectable_value(
+                        &mut self.order,
+                        Order::Descending,
+                        Order::Descending.text(),
+                    )
+                    .on_hover_text(Order::Descending.hover_text());
+                })
+                .response
+                .on_hover_text(self.order.hover_text());
+            ui.end_row();
         });
     }
 }
@@ -326,6 +368,29 @@ impl From<TimeUnits> for Units {
             TimeUnits::Millisecond => Units::millisecond(millisecond),
             TimeUnits::Second => Units::second(second),
             TimeUnits::Minute => Units::minute(minute),
+        }
+    }
+}
+
+/// Order
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub(in crate::app) enum Order {
+    Ascending,
+    Descending,
+}
+
+impl Order {
+    pub(in crate::app) fn text(self) -> &'static str {
+        match self {
+            Self::Ascending => "Ascending",
+            Self::Descending => "Descending",
+        }
+    }
+
+    pub(in crate::app) fn hover_text(self) -> &'static str {
+        match self {
+            Self::Ascending => "Dscending",
+            Self::Descending => "Descending",
         }
     }
 }

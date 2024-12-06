@@ -1,5 +1,5 @@
 use crate::{
-    app::panes::source::settings::{Settings, Sort},
+    app::panes::source::settings::{Order, Settings, Sort},
     special::polars::{ExprExt as _, Mass as _},
 };
 use egui::{
@@ -65,13 +65,12 @@ impl Computer {
                     DataType::List(Box::new(DataType::Int8)),
                     AnyValue::List(Series::from_iter(&fatty_acid.bounds)),
                 );
-                let fa = col("FA")
+                expr = expr.or(col("FA")
                     .fa()
                     .c()
                     .eq(lit(fatty_acid.carbons))
                     .and(col("FA").fa().indices().eq(lit(indices)))
-                    .and(col("FA").fa().bounds().eq(lit(bounds)));
-                expr = expr.or(fa.clone());
+                    .and(col("FA").fa().bounds().eq(lit(bounds))));
             }
             lazy_frame = lazy_frame.filter(expr);
         }
@@ -100,15 +99,16 @@ impl Computer {
         // }
 
         // Sort
+        let mut sort_options = SortMultipleOptions::new().with_nulls_last(true);
+        if key.settings.order == Order::Descending {
+            sort_options = sort_options.with_order_descending(true);
+        };
         lazy_frame = match key.settings.sort {
-            Sort::Mode => {
-                lazy_frame.sort_by_exprs(&[col("Mode"), col("FA")], SortMultipleOptions::new())
+            Sort::Mode => lazy_frame.sort_by_exprs(&[col("Mode"), col("FA")], sort_options),
+            Sort::Ecl => lazy_frame.sort_by_exprs(&[col("ECL").over([col("Mode")])], sort_options),
+            Sort::Time => {
+                lazy_frame.sort_by_exprs(&[col("Time").over([col("Mode")])], sort_options)
             }
-            Sort::Ecl => lazy_frame, // &[col("ECL")],   // over
-            Sort::Time => lazy_frame.sort_by_exprs(
-                &[col("Time")],
-                SortMultipleOptions::new().with_nulls_last(true),
-            ),
         };
         // Index
         lazy_frame = lazy_frame.cache().with_row_index("Index", None);
@@ -161,13 +161,13 @@ impl Hash for Key<'_> {
         //     }
         // }
 
-        // self.settings.hash(state);
         self.settings.filter.hash(state);
         self.settings.filter_onset_temperature.hash(state);
         self.settings.filter_temperature_step.hash(state);
         self.settings.interpolate.hash(state);
         self.settings.interpolation.hash(state);
         self.settings.sort.hash(state);
+        self.settings.order.hash(state);
     }
 }
 

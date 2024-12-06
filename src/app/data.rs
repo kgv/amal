@@ -97,18 +97,26 @@ impl Default for Data {
 pub(crate) enum Format {
     #[default]
     Bin,
+    Parquet,
     Ron,
 }
 
-pub(crate) fn save(path: impl AsRef<Path>, format: Format, data_frame: &DataFrame) -> Result<()> {
+pub(crate) fn save(
+    path: impl AsRef<Path>,
+    format: Format,
+    mut data_frame: DataFrame,
+) -> Result<()> {
+    println!("data_frame: {:#?}", data_frame.schema());
     match format {
         Format::Bin => {
-            println!("data_frame: {:#?}", data_frame.schema());
             let contents = bincode::serialize(&data_frame)?;
             write(path, contents)?;
         }
+        Format::Parquet => {
+            let mut file = File::create(path)?;
+            ParquetWriter::new(&mut file).finish(&mut data_frame)?;
+        }
         Format::Ron => {
-            println!("data_frame: {:#?}", data_frame.schema());
             let contents = ron::ser::to_string_pretty(
                 &data_frame,
                 PrettyConfig::default().extensions(Extensions::IMPLICIT_SOME),

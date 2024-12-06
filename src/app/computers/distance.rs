@@ -1,5 +1,5 @@
 use crate::{
-    app::panes::distance::settings::{Settings, Sort},
+    app::panes::distance::settings::{Order, Settings, Sort},
     special::polars::{ExprExt as _, Mass as _},
 };
 use egui::{
@@ -147,14 +147,20 @@ impl Computer {
                 .alias("ECL"),
         ]);
         // Sort
-        let name = match key.settings.sort {
-            Sort::Ecl => "ECL",
-            Sort::Time => "Time",
+        let mut sort_options = SortMultipleOptions::new().with_nulls_last(true);
+        if key.settings.order == Order::Descending {
+            sort_options = sort_options.with_order_descending(true);
         };
-        lazy_frame = lazy_frame.sort_by_exprs(
-            [col(name).abs().median().over([col("Mode")])],
-            SortMultipleOptions::new().with_order_reversed(),
-        );
+        lazy_frame = match key.settings.sort {
+            Sort::Ecl => lazy_frame.sort_by_exprs(
+                [col("ECL").abs().median().over([col("Mode")])],
+                sort_options,
+            ),
+            Sort::Time => lazy_frame.sort_by_exprs(
+                [col("Time").abs().median().over([col("Mode")])],
+                sort_options,
+            ),
+        };
         // Index
         lazy_frame = lazy_frame.with_row_index("Index", None);
         lazy_frame.collect()
@@ -205,7 +211,15 @@ impl Hash for Key<'_> {
         //         value.hash(state);
         //     }
         // }
-        self.settings.hash(state);
+        // self.settings.hash(state);
+        self.settings.filter.hash(state);
+        self.settings.filter_onset_temperature.hash(state);
+        self.settings.filter_temperature_step.hash(state);
+        self.settings.interpolation.hash(state);
+
+        self.settings.ddof.hash(state);
+        self.settings.sort.hash(state);
+        self.settings.order.hash(state);
     }
 }
 

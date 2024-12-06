@@ -1,5 +1,5 @@
 use super::Settings;
-use crate::special::fa_column::ColumnExt as _;
+use crate::{app::panes::widgets::float::FloatValue, special::fa_column::ColumnExt as _};
 use egui::{vec2, Frame, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
 use polars::prelude::*;
@@ -9,8 +9,7 @@ const MODE: usize = 1;
 const FROM: usize = 2;
 const TO: usize = 3;
 const TIME: usize = 4;
-const ECN: usize = 5;
-const MASS: usize = 6;
+const ECL: usize = 5;
 
 const MARGIN: Vec2 = vec2(4.0, 0.0);
 
@@ -51,7 +50,9 @@ impl TableView<'_> {
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: usize) {
-        ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
+        if self.settings.truncate {
+            ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
+        }
         match (row, column) {
             (0, INDEX) => {
                 ui.heading("Index");
@@ -68,11 +69,8 @@ impl TableView<'_> {
             (0, TIME) => {
                 ui.heading("Time");
             }
-            (0, ECN) => {
+            (0, ECL) => {
                 ui.heading("ECL");
-            }
-            (0, MASS) => {
-                ui.heading("Mass");
             }
             _ => {} // _ => unreachable!(),
         }
@@ -95,12 +93,6 @@ impl TableView<'_> {
                     temperature_step.str_value(row).unwrap()
                 ));
             }
-            // (row, FA) => {
-            //     let fatty_acids = self.target["FA"].fa();
-            //     let fatty_acid = fatty_acids.get(row).unwrap();
-            //     ui.label(fatty_acid.to_string())
-            //         .on_hover_text(fatty_acid.label());
-            // }
             (row, FROM) => {
                 let fatty_acids = self.data_frame["From"].fa();
                 let fatty_acid = fatty_acids.get(row).unwrap();
@@ -113,50 +105,22 @@ impl TableView<'_> {
                 ui.label(fatty_acid.to_string())
                     .on_hover_text(fatty_acid.label());
             }
-            // (row, MASS) => {
-            //     let mass = self.target["Mass"].struct_().unwrap();
-            //     let rcooch3 = mass.field_by_name("RCOOCH3").unwrap();
-            //     ui.label(rcooch3.str_value(row).unwrap()).on_hover_ui(|ui| {
-            //         Grid::new(ui.next_auto_id()).show(ui, |ui| {
-            //             ui.label("RCOOCH3");
-            //             ui.label(rcooch3.str_value(row).unwrap());
-            //             ui.end_row();
-            //             {
-            //                 ui.label("RCOOH");
-            //                 let rcooh = mass.field_by_name("RCOOH").unwrap();
-            //                 ui.label(rcooh.str_value(row).unwrap());
-            //             }
-            //             ui.end_row();
-            //             {
-            //                 ui.label("RCOO");
-            //                 let rcoo = mass.field_by_name("RCOO").unwrap();
-            //                 ui.label(rcoo.str_value(row).unwrap());
-            //             }
-            //         });
-            //     });
-            // }
-            // (row, TIME) => {
-            //     let time = self.target["Time"].struct_().unwrap();
-            //     let means = time.field_by_name("Mean").unwrap();
-            //     ui.label(means.str_value(row).unwrap()).on_hover_ui(|ui| {
-            //         Grid::new(ui.next_auto_id()).show(ui, |ui| {
-            //             // Absolute
-            //             ui.label("Absolute");
-            //             ui.horizontal(|ui| {
-            //                 ui.label(means.str_value(row).unwrap());
-            //                 ui.label("±");
-            //                 let standard_deviations =
-            //                     time.field_by_name("StandardDeviation").unwrap();
-            //                 ui.label(standard_deviations.str_value(row).unwrap());
-            //             });
-            //             ui.end_row();
-            //             // Relative
-            //             let relatives = time.field_by_name("Relative").unwrap();
-            //             ui.label("Relative");
-            //             ui.label(relatives.str_value(row).unwrap());
-            //         });
-            //     });
-            // }
+            (row, TIME) => {
+                let time = self.data_frame["Time"].f64().unwrap();
+                ui.add(
+                    FloatValue::new(time.get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                );
+            }
+            (row, ECL) => {
+                let ecl = self.data_frame["ECL"].f64().unwrap();
+                ui.add(
+                    FloatValue::new(ecl.get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                );
+            }
             (row, column) => {
                 let value = self.data_frame[column].get(row).unwrap();
                 ui.label(value.to_string());
