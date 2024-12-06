@@ -288,3 +288,4 @@ fn ron(dropped_file: &DroppedFile) -> Result<DataFrame> {
 mod computers;
 mod data;
 mod panes;
+mod text;

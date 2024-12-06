@@ -18,8 +18,9 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key<'_>) -> PolarsResult<DataFrame> {
+        let mut lazy_frame = key.data_frame.clone().lazy();
         // Mode, FA, Time
-        let mut lazy_frame = key.data_frame.clone().lazy().select([
+        lazy_frame = lazy_frame.select([
             as_struct(vec![
                 col("OnsetTemperature").alias("OnsetTemperature"),
                 col("TemperatureStep").alias("TemperatureStep"),
@@ -33,24 +34,24 @@ impl Computer {
             ])
             .alias("Time"),
         ]);
-        // Relative time, ECL, ECN, Mass
-        lazy_frame = lazy_frame
-            .with_columns([
-                col("Time")
-                    .struct_()
-                    .with_fields(vec![relative_time().over(["Mode"]).alias("Relative")])?,
-                ecl().over(["Mode"]).alias("ECL"),
-            ])
-            .with_columns([
-                (col("ECL") - col("FA").fa().c()).alias("FCL"),
-                col("FA").fa().ecn().alias("ECN"),
-                as_struct(vec![
-                    col("FA").fa().mass().alias("RCOOH"),
-                    col("FA").fa().rcoo().mass().alias("RCOO"),
-                    col("FA").fa().rcooch3().mass().alias("RCOOCH3"),
-                ])
-                .alias("Mass"),
-            ]);
+        // // Relative time, ECL, ECN, Mass
+        // lazy_frame = lazy_frame
+        //     .with_columns([
+        //         col("Time")
+        //             .struct_()
+        //             .with_fields(vec![relative_time().over(["Mode"]).alias("Relative")])?,
+        //         ecl().over(["Mode"]).alias("ECL"),
+        //     ])
+        //     .with_columns([
+        //         (col("ECL") - col("FA").fa().c()).alias("FCL"),
+        //         col("FA").fa().ecn().alias("ECN"),
+        //         as_struct(vec![
+        //             col("FA").fa().mass().alias("RCOOH"),
+        //             col("FA").fa().rcoo().mass().alias("RCOO"),
+        //             col("FA").fa().rcooch3().mass().alias("RCOOCH3"),
+        //         ])
+        //         .alias("Mass"),
+        //     ]);
         // Filter
         if !key.settings.filter.fatty_acids.is_empty() {
             let mut expr = lit(false);
@@ -74,29 +75,41 @@ impl Computer {
             }
             lazy_frame = lazy_frame.filter(expr);
         }
-        // Interpolate ECL
-        if key.settings.interpolate {
-            // lazy_frame = lazy_frame.with_columns([
-            //     // col("Time").over(["Mode"]),
-            //     col("Time")
-            //         .struct_()
-            //         .field_by_name("Mean")
-            //         .fill_null(lit(0.0))
-            //         .over(["Mode"])
-            //         .alias("INTERPOLATE_TIME"),
-            //     col("ECL")
-            //         // .interpolate_by(col("ECN"))
-            //         .interpolate(
-            //             col("Time")
-            //                 .struct_()
-            //                 .field_by_name("Mean")
-            //                 .fill_null(lit(0.0)),
-            //         )
-            //         // .interpolate(InterpolationMethod::Linear)
-            //         .over(["Mode"])
-            //         .alias("INTERPOLATE_ECL"),
-            // ]);
-        }
+        // Interpolate
+        // if key.settings.interpolate {
+        //     // lazy_frame = lazy_frame.with_columns([
+        //     //     // col("Time").over(["Mode"]),
+        //     //     col("Time")
+        //     //         .struct_()
+        //     //         .field_by_name("Mean")
+        //     //         .fill_null(lit(0.0))
+        //     //         .over(["Mode"])
+        //     //         .alias("INTERPOLATE_TIME"),
+        //     //     col("ECL")
+        //     //         // .interpolate_by(col("ECN"))
+        //     //         .interpolate(
+        //     //             col("Time")
+        //     //                 .struct_()
+        //     //                 .field_by_name("Mean")
+        //     //                 .fill_null(lit(0.0)),
+        //     //         )
+        //     //         // .interpolate(InterpolationMethod::Linear)
+        //     //         .over(["Mode"])
+        //     //         .alias("INTERPOLATE_ECL"),
+        //     // ]);
+        // }
+
+        // Sort
+        lazy_frame = match key.settings.sort {
+            Sort::Mode => {
+                lazy_frame.sort_by_exprs(&[col("Mode"), col("FA")], SortMultipleOptions::new())
+            }
+            Sort::Ecl => lazy_frame, // &[col("ECL")],   // over
+            Sort::Time => lazy_frame.sort_by_exprs(
+                &[col("Time")],
+                SortMultipleOptions::new().with_nulls_last(true),
+            ),
+        };
         // Index
         lazy_frame = lazy_frame.cache().with_row_index("Index", None);
         lazy_frame.collect()
@@ -133,12 +146,12 @@ impl Hash for Key<'_> {
         //         value.hash(state);
         //     }
         // }
-        for value in self.data_frame["OnsetTemperature"].f64().unwrap() {
-            value.map(|value| value.ord()).hash(state);
-        }
-        for value in self.data_frame["TemperatureStep"].f64().unwrap() {
-            value.map(|value| value.ord()).hash(state);
-        }
+        // for value in self.data_frame["OnsetTemperature"].f64().unwrap() {
+        //     value.map(|value| value.ord()).hash(state);
+        // }
+        // for value in self.data_frame["TemperatureStep"].f64().unwrap() {
+        //     value.map(|value| value.ord()).hash(state);
+        // }
         // for value in self.data_frame["Time"].vec_hash() {
         //     value.hash(state);
         // }

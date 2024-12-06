@@ -18,25 +18,28 @@ use uom::si::{
 /// Settings
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) struct Settings {
-    pub(crate) sticky_columns: usize,
     pub(crate) resizable: bool,
+    pub(crate) sticky: usize,
+
+    pub(crate) ddof: u8,
     pub(crate) filter: Filter,
     pub(crate) interpolation: Interpolation,
     pub(crate) filter_onset_temperature: Option<i32>,
     pub(crate) filter_temperature_step: Option<i32>,
-    pub(crate) sort_by: SortBy,
+    pub(crate) sort: Sort,
 }
 
 impl Settings {
     pub(crate) const fn new() -> Self {
         Self {
-            sticky_columns: 1,
             resizable: false,
+            sticky: 1,
+            ddof: 1,
             filter: Filter::new(),
             interpolation: Interpolation::new(),
             filter_onset_temperature: None,
             filter_temperature_step: None,
-            sort_by: SortBy::Time,
+            sort: Sort::Time,
         }
     }
 
@@ -44,10 +47,7 @@ impl Settings {
         Grid::new("calculation").show(ui, |ui| {
             // Sticky
             ui.label(localize!("sticky"));
-            ui.add(Slider::new(
-                &mut self.sticky_columns,
-                0..=data_frame.width(),
-            ));
+            ui.add(Slider::new(&mut self.sticky, 0..=data_frame.width()));
             ui.end_row();
 
             ui.separator();
@@ -65,6 +65,11 @@ impl Settings {
                 &mut self.interpolation.onset_temperature,
                 min..=max,
             ));
+            ui.end_row();
+
+            // https://numpy.org/devdocs/reference/generated/numpy.std.html
+            ui.label(localize!("ddof"));
+            ui.add(Slider::new(&mut self.ddof, 0..=2));
             ui.end_row();
 
             ui.label(localize!("temperature-step"));
@@ -113,10 +118,10 @@ impl Settings {
 
             ui.label("Sort");
             ComboBox::from_id_salt(ui.next_auto_id())
-                .selected_text(format!("{:?}", self.sort_by))
+                .selected_text(format!("{:?}", self.sort))
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.sort_by, SortBy::Ecl, "ECL");
-                    ui.selectable_value(&mut self.sort_by, SortBy::Time, "Time");
+                    ui.selectable_value(&mut self.sort, Sort::Ecl, "ECL");
+                    ui.selectable_value(&mut self.sort, Sort::Time, "Time");
                 });
         });
     }
@@ -175,31 +180,8 @@ impl Hash for Interpolation {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
-pub(crate) enum Sort {
-    #[default]
-    RetentionTime,
-    MassToCharge,
-}
-
-impl Sort {
-    pub(crate) fn text(&self) -> &'static str {
-        match self {
-            Self::RetentionTime => "Retention time",
-            Self::MassToCharge => "Mass to charge",
-        }
-    }
-
-    pub(crate) fn description(&self) -> &'static str {
-        match self {
-            Self::RetentionTime => "Sort by retention time column",
-            Self::MassToCharge => "Sort by mass to charge column",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) enum SortBy {
+pub(crate) enum Sort {
     Time,
     Ecl,
 }

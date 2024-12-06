@@ -1,5 +1,5 @@
 use crate::{
-    app::{localize, MAX_PRECISION},
+    app::{localize, text::Text, MAX_PRECISION},
     special::fa_column::{ColumnExt, FattyAcid},
 };
 use egui::{emath::Float, ComboBox, Grid, Slider, Ui};
@@ -130,6 +130,7 @@ impl Settings {
             ComboBox::from_id_salt(ui.next_auto_id())
                 .selected_text(format!("{:?}", self.sort))
                 .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.sort, Sort::Mode, "Mode");
                     ui.selectable_value(&mut self.sort, Sort::Ecl, "ECL");
                     ui.selectable_value(&mut self.sort, Sort::Time, "Time");
                 });
@@ -193,7 +194,25 @@ impl Hash for Interpolation {
 /// Sort
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) enum Sort {
-    // RetentionTime
+    Mode,
     Time,
     Ecl,
+}
+
+impl Text for Sort {
+    fn text(&self) -> &'static str {
+        match self {
+            Self::Mode => "Mode",
+            Self::Time => "Time",
+            Self::Ecl => "ECL",
+        }
+    }
+
+    fn description(&self) -> &'static str {
+        match self {
+            Self::Mode => "Mode",
+            Self::Time => "Retention time",
+            Self::Ecl => "Equivalent carbon number",
+        }
+    }
 }

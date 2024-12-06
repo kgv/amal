@@ -1,5 +1,5 @@
 use crate::{
-    app::panes::distance::settings::{Settings, SortBy},
+    app::panes::distance::settings::{Settings, Sort},
     special::polars::{ExprExt as _, Mass as _},
 };
 use egui::{
@@ -28,7 +28,10 @@ impl Computer {
             col("FA"),
             as_struct(vec![
                 col("Time").list().mean().alias("Mean"),
-                col("Time").list().std(0).alias("StandardDeviation"),
+                col("Time")
+                    .list()
+                    .std(key.settings.ddof)
+                    .alias("StandardDeviation"),
                 col("Time").alias("Values"),
             ])
             .alias("Time"),
@@ -144,9 +147,9 @@ impl Computer {
                 .alias("ECL"),
         ]);
         // Sort
-        let name = match key.settings.sort_by {
-            SortBy::Ecl => "ECL",
-            SortBy::Time => "Time",
+        let name = match key.settings.sort {
+            Sort::Ecl => "ECL",
+            Sort::Time => "Time",
         };
         lazy_frame = lazy_frame.sort_by_exprs(
             [col(name).abs().median().over([col("Mode")])],

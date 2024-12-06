@@ -44,7 +44,7 @@ impl TableView<'_> {
                 Column::default().resizable(self.settings.resizable);
                 num_columns
             ])
-            .num_sticky_cols(self.settings.sticky_columns)
+            .num_sticky_cols(self.settings.sticky)
             .headers([HeaderRow::new(height)])
             .auto_size_mode(AutoSizeMode::OnParentResize)
             .show(ui, self);

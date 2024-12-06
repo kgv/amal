@@ -4,12 +4,10 @@ use crate::app::{
     data::{save, Format},
     localize,
 };
-use anyhow::Result;
 use egui::{RichText, Ui, Window};
 use egui_phosphor::regular::{ARROWS_HORIZONTAL, FLOPPY_DISK, GEAR};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use table::TableView;
 use tracing::error;
 
@@ -30,17 +28,6 @@ impl Pane {
         }
     }
 
-    pub(super) fn content(&mut self, ui: &mut Ui) {
-        self.window(ui);
-        self.target = ui.memory_mut(|memory| {
-            memory.caches.cache::<DistanceComputed>().get(DistanceKey {
-                data_frame: &self.source,
-                settings: &self.control.settings,
-            })
-        });
-        TableView::new(&self.target, &self.control.settings).ui(ui);
-    }
-
     pub(super) fn header(&mut self, ui: &mut Ui) {
         ui.visuals_mut().button_frame = false;
         ui.separator();
@@ -53,20 +40,27 @@ impl Pane {
         ui.separator();
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             if ui.button("BIN").clicked() {
-                if let Err(error) = self.save("df.bin", Format::Bin) {
+                if let Err(error) = save("df.bin", Format::Bin, &self.target) {
                     error!(%error);
                 }
             }
             if ui.button("RON").clicked() {
-                if let Err(error) = self.save("df.ron", Format::Ron) {
+                if let Err(error) = save("df.ron", Format::Ron, &self.target) {
                     error!(%error);
                 }
             }
         });
     }
 
-    fn save(&self, path: impl AsRef<Path>, format: Format) -> Result<()> {
-        save(path, format, &self.target)
+    pub(super) fn content(&mut self, ui: &mut Ui) {
+        self.window(ui);
+        self.target = ui.memory_mut(|memory| {
+            memory.caches.cache::<DistanceComputed>().get(DistanceKey {
+                data_frame: &self.source,
+                settings: &self.control.settings,
+            })
+        });
+        TableView::new(&self.target, &self.control.settings).ui(ui);
     }
 
     fn window(&mut self, ui: &mut Ui) {
