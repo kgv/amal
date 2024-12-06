@@ -45,13 +45,13 @@ impl Pane {
                 }
             }
             if ui.button("BIN").clicked() {
-                println!("self.target: {}", self.target);
-                let lazy_frame = self.target.clone().lazy().select([
-                    col("Mode").struct_().field_by_names(["*"]),
-                    col("FA"),
-                    col("Time").struct_().field_by_name("Values").alias("Time"),
-                ]);
-                if let Err(error) = save("df.bin", Format::Bin, lazy_frame.collect().unwrap()) {
+                // println!("self.target: {}", self.target);
+                // let lazy_frame = self.target.clone().lazy().select([
+                //     col("Mode").struct_().field_by_names(["*"]),
+                //     col("FA"),
+                //     col("Time").struct_().field_by_name("Values").alias("Time"),
+                // ]);
+                if let Err(error) = save("df.bin", Format::Bin, self.target.clone()) {
                     error!(%error);
                 }
             }
