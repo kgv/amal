@@ -41,6 +41,21 @@ impl FattyAcids {
         })
     }
 
+    pub fn saturated(&self) -> PolarsResult<Self> {
+        let mask = self
+            .bounds
+            .list()?
+            .iter()
+            .map(|series| Some(series?.is_empty()))
+            .collect();
+        Ok(Self {
+            carbons: self.carbons.filter(&mask)?,
+            indices: self.indices.filter(&mask)?,
+            bounds: self.bounds.filter(&mask)?,
+            labels: self.labels.filter(&mask)?,
+        })
+    }
+
     pub fn get(&self, index: usize) -> PolarsResult<FattyAcid> {
         let carbons = self.carbons.u8()?.get(index).unwrap();
         let indices = self
@@ -89,7 +104,7 @@ impl FattyAcids {
 }
 
 /// Fatty acid
-#[derive(Clone, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct FattyAcid {
     pub carbons: u8,
     pub indices: Vec<u8>,

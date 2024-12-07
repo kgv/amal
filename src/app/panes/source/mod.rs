@@ -43,6 +43,7 @@ impl Pane {
                 if let Err(error) = save("df.parquet", Format::Parquet, self.target.clone()) {
                     error!(%error);
                 }
+                ui.close_menu();
             }
             if ui.button("BIN").clicked() {
                 // println!("self.target: {}", self.target);
@@ -54,11 +55,13 @@ impl Pane {
                 if let Err(error) = save("df.bin", Format::Bin, self.target.clone()) {
                     error!(%error);
                 }
+                ui.close_menu();
             }
             if ui.button("RON").clicked() {
                 if let Err(error) = save("df.ron", Format::Ron, self.target.clone()) {
                     error!(%error);
                 }
+                ui.close_menu();
             }
         });
     }

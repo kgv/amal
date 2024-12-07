@@ -14,7 +14,7 @@ mod test {
     use anyhow::Result;
     use polars::prelude::*;
     use ron::{extensions::Extensions, ser::PrettyConfig};
-    use special::polars::{ExprExt, Mass as _};
+    use special::expressions::fatty_acid::{ExprExt, FattyAcid as _};
     use std::{fs::write, iter::empty, path::Path};
     use walkdir::WalkDir;
 

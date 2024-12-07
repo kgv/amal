@@ -1,20 +1,6 @@
 use crate::r#const::relative_atomic_mass::{C, H, O};
 use polars::prelude::*;
 
-// pub static FATTY_ACIDS_SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
-//     Schema::from_iter([
-//         Field::new("Carbons".into(), DataType::UInt8),
-//         Field::new(
-//             "Bounds".into(),
-//             DataType::List(Box::new(DataType::Struct(vec![
-//                 Field::new("Index".into(), DataType::Int8),
-//                 Field::new("Multiplicity".into(), DataType::UInt8),
-//             ]))),
-//         ),
-//         Field::new("Label".into(), DataType::String),
-//     ])
-// });
-
 /// Extension methods for [`Expr`]
 pub trait ExprExt {
     fn fa(self) -> Rcooh;
@@ -26,8 +12,8 @@ impl ExprExt for Expr {
     }
 }
 
-/// Mass
-pub trait Mass {
+/// FattyAcid
+pub trait FattyAcid {
     /// Carbons count
     fn c(&self) -> Expr;
 
@@ -100,7 +86,7 @@ impl Rcooh {
     }
 }
 
-impl Mass for Rcooh {
+impl FattyAcid for Rcooh {
     fn c(&self) -> Expr {
         self.0.clone().struct_().field_by_name("Carbons")
     }
@@ -120,7 +106,7 @@ impl From<Rcooh> for Expr {
 #[derive(Clone)]
 pub struct Rcooch3(Rcooh);
 
-impl Mass for Rcooch3 {
+impl FattyAcid for Rcooch3 {
     fn c(&self) -> Expr {
         self.0.c() + lit(1)
     }
@@ -134,7 +120,7 @@ impl Mass for Rcooch3 {
 #[derive(Clone)]
 pub struct Rcoo(Rcooh);
 
-impl Mass for Rcoo {
+impl FattyAcid for Rcoo {
     fn c(&self) -> Expr {
         self.0.c()
     }

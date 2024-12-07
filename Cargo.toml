@@ -25,7 +25,7 @@ log = "0.4.22"
 molecule = { git = "https://github.com/ippras/molecule" }
 # https://github.com/pola-rs/polars/issues/17192
 # polars = { version = "0.44.2", features = [
-polars = { git = "https://github.com/coastalwhite/polars", branch = "fix/32bit-row-encoding", features = [
+polars = { git = "https://github.com/pola-rs/polars", rev = "c92612afb11d1ca355cfe03530df6c3d301082a1", features = [
     "abs",
     "cross_join",
     "diagonal_concat",

@@ -1,12 +1,14 @@
 use crate::{
     app::{localize, text::Text, MAX_PRECISION},
-    special::fa_column::{ColumnExt, FattyAcid},
+    special::columns::{
+        fatty_acids::{ColumnExt as _, FattyAcid},
+        mode::ColumnExt as _,
+    },
 };
-use egui::{
-    emath::{Float, OrderedFloat},
-    ComboBox, Grid, Slider, Ui,
-};
+use egui::{emath::Float, ComboBox, Grid, RichText, Slider, Ui};
+use egui_ext::LabeledSeparator;
 use egui_phosphor::regular::TRASH;
+use itertools::Itertools;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
@@ -19,10 +21,8 @@ pub(crate) struct Settings {
     pub(crate) sticky: usize,
     pub(crate) truncate: bool,
 
-    pub(crate) interpolate: bool,
-    // pub(crate) interpolation: Mode,
-    // pub(crate) filter_onset_temperature: Option<i32>,
-    // pub(crate) filter_temperature_step: Option<i32>,
+    pub(crate) ddof: u8,
+    pub(crate) relative: Option<FattyAcid>,
     pub(crate) filter: Filter,
     pub(crate) sort: Sort,
     pub(crate) order: Order,
@@ -36,13 +36,11 @@ impl Settings {
             sticky: 1,
             truncate: false,
 
-            interpolate: false,
-            // interpolation: Mode::new(),
-            // filter_onset_temperature: None,
-            // filter_temperature_step: None,
+            ddof: 1,
+            relative: None,
             filter: Filter::new(),
-            sort: Sort::Mode,
-            order: Order::Descending,
+            sort: Sort::Time,
+            order: Order::Ascending,
         }
     }
 
@@ -63,57 +61,92 @@ impl Settings {
             ui.checkbox(&mut self.truncate, "");
             ui.end_row();
 
+            // Calculate
             ui.separator();
-            ui.separator();
+            ui.labeled_separator(RichText::new("Calculate").heading());
+            ui.end_row();
+
+            // Relative
+            ui.label("Relative").on_hover_text("Relative fatty acid");
+            ui.horizontal(|ui| {
+                ComboBox::from_id_salt(ui.auto_id_with("Relative"))
+                    .selected_text(
+                        self.relative
+                            .as_ref()
+                            .map(ToString::to_string)
+                            .unwrap_or_default(),
+                    )
+                    .show_ui(ui, |ui| {
+                        let current_value = &mut self.relative;
+                        let fatty_acids = data_frame["FA"].fa();
+                        for selected_value in
+                            fatty_acids.saturated().unwrap().iter().unwrap().unique()
+                        {
+                            let text = selected_value.to_string();
+                            ui.selectable_value(current_value, Some(selected_value), text);
+                        }
+                    });
+            });
+            ui.end_row();
+
+            // DDOF
+            // https://numpy.org/devdocs/reference/generated/numpy.std.html
+            ui.label("DDOF");
+            ui.add(Slider::new(&mut self.ddof, 0..=2));
             ui.end_row();
 
             // Filter
+            ui.separator();
+            ui.labeled_separator(RichText::new("Filter").heading());
+            ui.end_row();
+
             // Onset temperature filter
-            ui.label("Onset").on_hover_text("Onset temperature filter");
-            ComboBox::from_id_salt("FilterOnsetTemperature")
-                .selected_text(format!("{:?}", self.filter.mode.onset_temperature))
-                .show_ui(ui, |ui| {
-                    let current_value = &mut self.filter.mode.onset_temperature;
-                    let onset_temperature = data_frame["OnsetTemperature"]
-                        .f64()
-                        .unwrap()
-                        .unique()
-                        .unwrap();
-                    for selected_value in &onset_temperature {
-                        ui.selectable_value(
-                            current_value,
-                            selected_value,
-                            AnyValue::from(selected_value).to_string(),
-                        );
-                    }
-                    ui.selectable_value(current_value, None, "None");
-                });
+            ui.label("Onset").on_hover_text("Onset temperature");
+            ui.horizontal(|ui| {
+                ComboBox::from_id_salt("OnsetTemperatureFilter")
+                    .selected_text(format!("{:?}", self.filter.mode.onset_temperature))
+                    .show_ui(ui, |ui| {
+                        let current_value = &mut self.filter.mode.onset_temperature;
+                        for selected_value in
+                            &data_frame["Mode"].mode().onset_temperature().unique()
+                        {
+                            ui.selectable_value(
+                                current_value,
+                                selected_value,
+                                AnyValue::from(selected_value).to_string(),
+                            );
+                        }
+                    });
+                if ui.button(TRASH).clicked() {
+                    self.filter.mode.onset_temperature = None;
+                }
+            });
             ui.end_row();
 
             // Temperature step filter
-            ui.label("Step").on_hover_text("Temperature step filter");
-            ComboBox::from_id_salt("FilterTemperatureStep")
-                .selected_text(format!("{:?}", self.filter.mode.temperature_step))
-                .show_ui(ui, |ui| {
-                    let current_value = &mut self.filter.mode.temperature_step;
-                    let temperature_step = data_frame["TemperatureStep"]
-                        .f64()
-                        .unwrap()
-                        .unique()
-                        .unwrap();
-                    for selected_value in &temperature_step {
-                        ui.selectable_value(
-                            current_value,
-                            selected_value,
-                            AnyValue::from(selected_value).to_string(),
-                        );
-                    }
-                    ui.selectable_value(current_value, None, "None");
-                });
+            ui.label("Step").on_hover_text("Temperature step");
+            ui.horizontal(|ui| {
+                ComboBox::from_id_salt("TemperatureStepFilter")
+                    .selected_text(format!("{:?}", self.filter.mode.temperature_step))
+                    .show_ui(ui, |ui| {
+                        let current_value = &mut self.filter.mode.temperature_step;
+                        for selected_value in &data_frame["Mode"].mode().temperature_step().unique()
+                        {
+                            ui.selectable_value(
+                                current_value,
+                                selected_value,
+                                AnyValue::from(selected_value).to_string(),
+                            );
+                        }
+                    });
+                if ui.button(TRASH).clicked() {
+                    self.filter.mode.temperature_step = None;
+                }
+            });
             ui.end_row();
 
             // Fatty acids filter
-            ui.label("Filter");
+            ui.label("Fatty acids");
             // let text = AnyValue::List(Series::from_iter(
             //     self.filter
             //         .fatty_acids
@@ -121,10 +154,9 @@ impl Settings {
             //         .map(|fatty_acid| fatty_acid.to_string()),
             // ))
             // .to_string();
-            let text = self.filter.fatty_acids.len().to_string();
             ui.horizontal(|ui| {
-                ComboBox::from_id_salt("FilterFattyAcids")
-                    .selected_text(text)
+                ComboBox::from_id_salt("FattyAcidsFilter")
+                    .selected_text(self.filter.fatty_acids.len().to_string())
                     .show_ui(ui, |ui| {
                         let fatty_acids = data_frame["FA"]
                             .unique()
@@ -149,11 +181,11 @@ impl Settings {
             });
             ui.end_row();
 
+            // Sort
             ui.separator();
-            ui.separator();
+            ui.labeled_separator(RichText::new("Sort").heading());
             ui.end_row();
 
-            // Sort
             ui.label("Sort");
             ComboBox::from_id_salt(ui.next_auto_id())
                 .selected_text(format!("{:?}", self.sort))

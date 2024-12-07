@@ -1,5 +1,7 @@
 use super::Settings;
-use crate::{app::panes::widgets::float::FloatValue, special::fa_column::ColumnExt as _};
+use crate::{
+    app::panes::widgets::float::FloatValue, special::columns::fatty_acids::ColumnExt as _,
+};
 use egui::{vec2, Frame, Grid, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
 use polars::prelude::*;
@@ -8,10 +10,12 @@ const INDEX: usize = 0;
 const MODE: usize = 1;
 const FA: usize = 2;
 const TIME: usize = 3;
-const ECL: usize = 4;
-const FCL: usize = 5;
-const ECN: usize = 6;
-const MASS: usize = 7;
+const TEMPERATURE: usize = 4;
+const ECL: usize = 5;
+const FCL: usize = 6;
+const ECN: usize = 7;
+const MASS: usize = 8;
+const SLOPE: usize = 9;
 
 const MARGIN: Vec2 = vec2(4.0, 0.0);
 
@@ -68,6 +72,9 @@ impl TableView<'_> {
             (0, TIME) => {
                 ui.heading("Time");
             }
+            (0, TEMPERATURE) => {
+                ui.heading("Temperature");
+            }
             (0, ECL) => {
                 ui.heading("ECL");
             }
@@ -79,6 +86,9 @@ impl TableView<'_> {
             }
             (0, MASS) => {
                 ui.heading("Mass");
+            }
+            (0, SLOPE) => {
+                ui.heading("Slope");
             }
             _ => {} // _ => unreachable!(),
         }
@@ -133,6 +143,14 @@ impl TableView<'_> {
                     });
                 });
             }
+            (row, TEMPERATURE) => {
+                let temperature = &self.data_frame["Temperature"];
+                ui.add(
+                    FloatValue::new(temperature.f64().unwrap().get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                );
+            }
             (row, ECL) => {
                 let ecl = &self.data_frame[ECL];
                 ui.add(
@@ -158,20 +176,47 @@ impl TableView<'_> {
                 )
                 .on_hover_ui(|ui| {
                     Grid::new(ui.next_auto_id()).show(ui, |ui| {
+                        ui.label("RCOO");
+                        let rcoo = mass.field_by_name("RCOO").unwrap();
+                        ui.label(rcoo.str_value(row).unwrap());
+                        ui.end_row();
+
+                        ui.label("RCOOH");
+                        let rcooh = mass.field_by_name("RCOOH").unwrap();
+                        ui.label(rcooh.str_value(row).unwrap());
+                        ui.end_row();
+
                         ui.label("RCOOCH3");
                         ui.label(rcooch3.str_value(row).unwrap());
+                    });
+                });
+            }
+            (row, SLOPE) => {
+                let meta = self.data_frame["Meta"].struct_().unwrap();
+                let slope = meta.field_by_name("Slope").unwrap();
+                ui.add(
+                    FloatValue::new(slope.f64().unwrap().get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                )
+                .on_hover_ui(|ui| {
+                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
+                        ui.label("Temperature distance");
+                        let temperature_distance =
+                            meta.field_by_name("TemperatureDistance").unwrap();
+                        ui.label(temperature_distance.str_value(row).unwrap());
                         ui.end_row();
-                        {
-                            ui.label("RCOOH");
-                            let rcooh = mass.field_by_name("RCOOH").unwrap();
-                            ui.label(rcooh.str_value(row).unwrap());
-                        }
+
+                        ui.label("Time distance");
+                        let time_distance = meta.field_by_name("TimeDistance").unwrap();
+                        ui.label(time_distance.str_value(row).unwrap());
                         ui.end_row();
-                        {
-                            ui.label("RCOO");
-                            let rcoo = mass.field_by_name("RCOO").unwrap();
-                            ui.label(rcoo.str_value(row).unwrap());
-                        }
+
+                        ui.label("Slope");
+                        ui.label(slope.str_value(row).unwrap());
+
+                        // ui.label("RCOOCH3");
+                        // ui.label(rcooch3.str_value(row).unwrap());
                     });
                 });
             }

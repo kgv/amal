@@ -1,5 +1,7 @@
 use super::Settings;
-use crate::{app::panes::widgets::float::FloatValue, special::fa_column::ColumnExt as _};
+use crate::{
+    app::panes::widgets::float::FloatValue, special::columns::fatty_acids::ColumnExt as _,
+};
 use egui::{vec2, Frame, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
 use polars::prelude::*;

@@ -34,13 +34,6 @@ impl Pane {
             Self::Distance(_) => "Distance",
         }
     }
-
-    pub(crate) const fn data_frame(&self) -> &DataFrame {
-        match self {
-            Self::Source(pane) => &pane.target,
-            Self::Distance(pane) => &pane.target,
-        }
-    }
 }
 
 impl Pane {

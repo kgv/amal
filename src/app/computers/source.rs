@@ -1,11 +1,11 @@
 use crate::{
-    app::panes::source::settings::{Order, Settings, Sort},
-    special::polars::{ExprExt as _, Mass as _},
+    app::{
+        panes::source::settings::{Order, Settings, Sort},
+        MAX_TEMPERATURE,
+    },
+    special::expressions::fatty_acid::{ExprExt as _, FattyAcid as _},
 };
-use egui::{
-    emath::Float,
-    util::cache::{ComputerMut, FrameCache},
-};
+use egui::util::cache::{ComputerMut, FrameCache};
 use polars::prelude::*;
 use std::hash::{Hash, Hasher};
 
@@ -19,28 +19,32 @@ pub(crate) struct Computer;
 impl Computer {
     fn try_compute(&mut self, key: Key<'_>) -> PolarsResult<DataFrame> {
         let mut lazy_frame = key.data_frame.clone().lazy();
-        // Mode, FA, Time
-        lazy_frame = lazy_frame.select([
-            as_struct(vec![
-                col("OnsetTemperature").alias("OnsetTemperature"),
-                col("TemperatureStep").alias("TemperatureStep"),
-            ])
-            .alias("Mode"),
-            col("FA"),
+        // Time
+        lazy_frame = lazy_frame.with_column(
             as_struct(vec![
                 col("Time").list().mean().alias("Mean"),
-                col("Time").list().std(0).alias("StandardDeviation"),
+                col("Time")
+                    .list()
+                    .std(key.settings.ddof)
+                    .alias("StandardDeviation"),
                 col("Time").alias("Values"),
             ])
             .alias("Time"),
-        ]);
-        // Relative time, ECL, ECN, Mass
+        );
+        // Relative time, Temperature, ECL, ECN, Mass
         lazy_frame = lazy_frame
             .with_columns([
                 col("Time")
                     .struct_()
-                    .with_fields(vec![relative_time().over(["Mode"]).alias("Relative")])?,
+                    .with_fields(vec![relative_time(key.settings)
+                        .over(["Mode"])
+                        .alias("Relative")])?,
                 ecl().over(["Mode"]).alias("ECL"),
+                (col("Mode").struct_().field_by_name("OnsetTemperature")
+                    + col("Time").struct_().field_by_name("Mean")
+                        * col("Mode").struct_().field_by_name("TemperatureStep"))
+                .clip_max(lit(MAX_TEMPERATURE))
+                .alias("Temperature"),
             ])
             .with_columns([
                 (col("ECL") - col("FA").fa().c()).alias("FCL"),
@@ -52,6 +56,47 @@ impl Computer {
                 ])
                 .alias("Mass"),
             ]);
+        // // Meta
+        // lazy_frame = concat_lf_horizontal(
+        //     [
+        //         lazy_frame.clone(),
+        //         lazy_frame
+        //             .select([
+        //                 saturated(col("Temperature"))
+        //                     .backward_fill(None)
+        //                     .over(["Mode"])
+        //                     .alias("BackwardTemperature"),
+        //                 saturated(col("Temperature"))
+        //                     .forward_fill(None)
+        //                     .over(["Mode"])
+        //                     .alias("ForwardTemperature"),
+        //                 saturated(col("Time").struct_().field_by_name("Mean"))
+        //                     .backward_fill(None)
+        //                     .over(["Mode"])
+        //                     .alias("BackwardTime"),
+        //                 saturated(col("Time").struct_().field_by_name("Mean"))
+        //                     .forward_fill(None)
+        //                     .over(["Mode"])
+        //                     .alias("ForwardTime"),
+        //             ])
+        //             .with_columns([
+        //                 (col("BackwardTemperature") - col("ForwardTemperature"))
+        //                     .alias("TemperatureDistance"),
+        //                 (col("BackwardTime") - col("ForwardTime")).alias("TimeDistance"),
+        //             ])
+        //             .select([as_struct(vec![
+        //                 col("BackwardTemperature"),
+        //                 col("ForwardTemperature"),
+        //                 col("TemperatureDistance"),
+        //                 col("BackwardTime"),
+        //                 col("ForwardTime"),
+        //                 col("TimeDistance"),
+        //                 (col("TimeDistance") / col("TemperatureDistance")).alias("Slope"),
+        //             ])
+        //             .alias("Meta")]),
+        //     ],
+        //     UnionArgs::default(),
+        // )?;
         // Filter
         if let Some(onset_temperature) = key.settings.filter.mode.onset_temperature {
             lazy_frame = lazy_frame.filter(
@@ -120,21 +165,9 @@ impl Computer {
             sort_options = sort_options.with_order_descending(true);
         };
         lazy_frame = match key.settings.sort {
-            Sort::Mode => lazy_frame.sort_by_exprs(&[col("Mode"), col("FA")], sort_options),
-            Sort::Ecl => {
-                lazy_frame.sort_by_exprs(&[col("ECL").max().over([col("Mode")])], sort_options)
-            }
-            Sort::Time => lazy_frame.sort_by_exprs(
-                &[
-                    col("Time")
-                        .struct_()
-                        .field_by_name("Mean")
-                        .max()
-                        .over([col("Mode")]),
-                    col("Time"),
-                ],
-                sort_options,
-            ),
+            Sort::Mode => lazy_frame.sort_by_fatty_acids(sort_options),
+            Sort::Ecl => lazy_frame.sort_by_ecl(sort_options),
+            Sort::Time => lazy_frame.sort_by_time(sort_options),
         };
         // Index
         lazy_frame = lazy_frame.cache().with_row_index("Index", None);
@@ -155,42 +188,50 @@ pub struct Key<'a> {
     pub(crate) settings: &'a Settings,
 }
 
-// impl Hash for Key<'_> {
-//     fn hash<H: Hasher>(&self, state: &mut H) {
-//         for column in self.data_frame.get_columns() {
-//             for value in column.phys_iter() {
-//                 value.hash(state);
-//             }
-//         }
-//         self.settings.hash(state);
-//     }
-// }
 impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        // for column in self.data_frame.get_columns() {
-        //     for value in column.phys_iter() {
-        //         value.hash(state);
-        //     }
-        // }
-        // for value in self.data_frame["OnsetTemperature"].f64().unwrap() {
-        //     value.map(|value| value.ord()).hash(state);
-        // }
-        // for value in self.data_frame["TemperatureStep"].f64().unwrap() {
-        //     value.map(|value| value.ord()).hash(state);
-        // }
-        // for value in self.data_frame["Time"].vec_hash() {
-        //     value.hash(state);
-        // }
-        // for series in self.data_frame.iter() {
-        //     for value in series.iter() {
-        //         value.hash(state);
-        //     }
-        // }
-
+        self.settings.ddof.hash(state);
+        self.settings.relative.hash(state);
         self.settings.filter.hash(state);
-        self.settings.interpolate.hash(state);
         self.settings.sort.hash(state);
         self.settings.order.hash(state);
+    }
+}
+
+/// Extension methods for [`LazyFrame`]
+trait LazyFrameExt {
+    fn sort_by_ecl(self, sort_options: SortMultipleOptions) -> LazyFrame;
+
+    fn sort_by_fatty_acids(self, sort_options: SortMultipleOptions) -> LazyFrame;
+
+    fn sort_by_time(self, sort_options: SortMultipleOptions) -> LazyFrame;
+}
+
+impl LazyFrameExt for LazyFrame {
+    fn sort_by_ecl(self, sort_options: SortMultipleOptions) -> LazyFrame {
+        self.sort(["Mode"], sort_options.clone()).select([all()
+            .sort_by(&[col("ECL")], sort_options)
+            .over([col("Mode")])])
+    }
+
+    fn sort_by_fatty_acids(self, sort_options: SortMultipleOptions) -> LazyFrame {
+        self.sort_by_exprs(
+            [
+                col("Mode"),
+                col("FA").fa().c(),
+                col("FA").fa().unsaturation(),
+                col("FA").fa().indices(),
+                col("FA").fa().bounds(),
+                // col("FA").fa().bounds().list().eval(-col(""), true),
+            ],
+            sort_options,
+        )
+    }
+
+    fn sort_by_time(self, sort_options: SortMultipleOptions) -> LazyFrame {
+        self.sort(["Mode"], sort_options.clone()).select([all()
+            .sort_by(&[col("Time")], sort_options)
+            .over([col("Mode")])])
     }
 }
 
@@ -199,7 +240,7 @@ impl Hash for Key<'_> {
 //                 .c()
 //                 .eq(lit(18))
 //                 .and(col("FA").fa().saturated()),
-fn diff(left: Expr, right: Expr) -> Expr {
+fn distance(left: Expr, right: Expr) -> Expr {
     (col("Time")
         .struct_()
         .field_by_name("Mean")
@@ -213,18 +254,30 @@ fn diff(left: Expr, right: Expr) -> Expr {
     .abs()
 }
 
-fn relative_time() -> Expr {
-    col("Time").struct_().field_by_name("Mean")
-        / col("Time")
-            .struct_()
-            .field_by_name("Mean")
-            .filter(
-                col("FA")
-                    .fa()
-                    .saturated()
-                    .and(col("FA").fa().c().eq(lit(18))),
-            )
-            .first()
+fn relative_time(settings: &Settings) -> Expr {
+    let mut expr = col("Time").struct_().field_by_name("Mean");
+    if let Some(relative) = &settings.relative {
+        expr = expr
+            / col("Time")
+                .struct_()
+                .field_by_name("Mean")
+                .filter(
+                    col("FA")
+                        .fa()
+                        .c()
+                        .eq(lit(relative.carbons))
+                        .and(col("FA").fa().indices().eq(lit(Scalar::new(
+                            DataType::List(Box::new(DataType::UInt8)),
+                            AnyValue::List(Series::from_iter(relative.indices.iter())),
+                        ))))
+                        .and(col("FA").fa().bounds().eq(lit(Scalar::new(
+                            DataType::List(Box::new(DataType::Int8)),
+                            AnyValue::List(Series::from_iter(relative.bounds.iter())),
+                        )))),
+                )
+                .first()
+    }
+    expr
 }
 
 // fn ecl(fa: Expr, time: Expr) -> Expr {
@@ -253,6 +306,20 @@ fn ecl() -> Expr {
             + (col("Time").struct_().field_by_name("Mean") - time().forward_fill(None))
                 / (time().backward_fill(None) - time().forward_fill(None)),
     )
+}
+
+fn slope() -> Expr {
+    ternary_expr(
+        col("FA").fa().saturated(),
+        lit(0),
+        ternary_expr(col("FA").fa().saturated(), col("FA").fa().c(), lit(NULL)).forward_fill(None)
+            + (col("Time").struct_().field_by_name("Mean") - time().forward_fill(None))
+                / (time().backward_fill(None) - time().forward_fill(None)),
+    )
+}
+
+fn saturated(expr: Expr) -> Expr {
+    ternary_expr(col("FA").fa().saturated(), expr, lit(NULL))
 }
 
 fn time() -> Expr {

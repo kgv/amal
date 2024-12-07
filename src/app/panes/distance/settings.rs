@@ -1,6 +1,9 @@
 use crate::{
     app::{localize, MAX_PRECISION},
-    special::fa_column::{ColumnExt, FattyAcid},
+    special::columns::{
+        fatty_acids::{ColumnExt as _, FattyAcid},
+        mode::ColumnExt as _,
+    },
 };
 use egui::{emath::Float, ComboBox, Grid, Slider, Ui, WidgetText};
 use egui_phosphor::regular::TRASH;
@@ -83,26 +86,16 @@ impl Settings {
 
             // ui.label("Interpolation");
             ui.label(localize!("onset-temperature"));
-            let (min, max) = data_frame["OnsetTemperature"]
-                .f64()
-                .unwrap()
-                .min_max()
-                .unwrap();
             ui.add(Slider::new(
                 &mut self.interpolation.onset_temperature,
-                min..=max,
+                data_frame["Mode"].mode().onset_temperature_range(),
             ));
             ui.end_row();
 
             ui.label(localize!("temperature-step"));
-            let (min, max) = data_frame["TemperatureStep"]
-                .f64()
-                .unwrap()
-                .min_max()
-                .unwrap();
             ui.add(Slider::new(
                 &mut self.interpolation.temperature_step,
-                min..=max,
+                data_frame["Mode"].mode().temperature_step_range(),
             ));
             ui.end_row();
 

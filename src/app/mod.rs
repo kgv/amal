@@ -29,9 +29,10 @@ macro localize($text:literal) {
 
 /// IEEE 754-2008
 const MAX_PRECISION: usize = 16;
+const MAX_TEMPERATURE: f64 = 250.0;
 const _NOTIFICATIONS_DURATION: Duration = Duration::from_secs(15);
 const SIZE: f32 = 32.0;
-const AGILENT: &[u8] = include_bytes!("../../assets/agilent.bin");
+const AGILENT: &[u8] = include_bytes!("../../assets/1/agilent.bin");
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
@@ -115,23 +116,10 @@ impl App {
                         if !self.tree.tiles.is_empty() {
                             self.tree = Tree::empty("tree");
                         }
-                        self.tree
-                            .insert_pane(Pane::source(self.data.data_frame.clone()));
-                        self.tree
-                            .insert_pane(Pane::distance(self.data.data_frame.clone()));
-                        // let mut tiles = Tiles::default();
-                        // // let mut children = vec![];
-                        // // let tile_id = tiles.insert_pane(Pane::source(self.data.data_frame.clone()));
-                        // // children.push(tile_id);
-                        // // let tile_id =
-                        // //     tiles.insert_pane(Pane::distance(self.data.data_frame.clone()));
-                        // // children.push(tile_id);
-                        // let children = vec![
-                        //     tiles.insert_pane(Pane::source(self.data.data_frame.clone())),
-                        //     tiles.insert_pane(Pane::distance(self.data.data_frame.clone())),
-                        // ];
-                        // let root = self.tree.tiles.insert_tab_tile(children);
-                        // self.tree = Tree::new("tree", root, tiles);
+                        // self.tree
+                        //     .insert_pane(Pane::source(self.data.data_frame.clone()));
+                        // self.tree
+                        //     .insert_pane(Pane::distance(self.data.data_frame.clone()));
                         trace!(?self.data);
                     }
                     Err(error) => {
@@ -144,6 +132,32 @@ impl App {
                     }
                 };
             }
+            println!("data_frame: {}", self.data.data_frame);
+            let data_frame = self
+                .data
+                .data_frame
+                .clone()
+                .lazy()
+                .select([
+                    as_struct(vec![
+                        col("OnsetTemperature").alias("OnsetTemperature"),
+                        col("TemperatureStep").alias("TemperatureStep"),
+                    ])
+                    .alias("Mode"),
+                    col("FA"),
+                    col("Time"),
+                ])
+                .cache()
+                .sort(["Mode"], SortMultipleOptions::new())
+                .select([all()
+                    .sort_by(&[col("Time").list().mean()], SortMultipleOptions::new())
+                    .over([col("Mode")])])
+                .collect()
+                .unwrap();
+            println!("data_frame: {data_frame}");
+            self.tree.insert_pane(Pane::source(data_frame.clone()));
+            self.tree.insert_pane(Pane::distance(data_frame.clone()));
+            data::save("data_frame.bin", data::Format::Bin, data_frame).unwrap();
         }
     }
 }
@@ -226,6 +240,7 @@ impl App {
                         self.tree.insert_pane(Pane::source(data_frame));
                         let data_frame: DataFrame = bincode::deserialize(AGILENT).unwrap();
                         self.tree.insert_pane(Pane::distance(data_frame));
+                        ui.close_menu();
                     }
                 });
                 ui.separator();

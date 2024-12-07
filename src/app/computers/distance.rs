@@ -1,11 +1,8 @@
 use crate::{
     app::panes::distance::settings::{Order, Settings, Sort},
-    special::polars::{ExprExt as _, Mass as _},
+    special::expressions::fatty_acid::{ExprExt as _, FattyAcid as _},
 };
-use egui::{
-    emath::Float,
-    util::cache::{ComputerMut, FrameCache},
-};
+use egui::util::cache::{ComputerMut, FrameCache};
 use polars::prelude::*;
 use std::hash::{Hash, Hasher};
 
@@ -18,14 +15,9 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key<'_>) -> PolarsResult<DataFrame> {
-        // Mode, FA, Time
-        let mut lazy_frame = key.data_frame.clone().lazy().select([
-            as_struct(vec![
-                col("OnsetTemperature").alias("OnsetTemperature"),
-                col("TemperatureStep").alias("TemperatureStep"),
-            ])
-            .alias("Mode"),
-            col("FA"),
+        let mut lazy_frame = key.data_frame.clone().lazy();
+        // Time
+        lazy_frame = lazy_frame.with_column(
             as_struct(vec![
                 col("Time").list().mean().alias("Mean"),
                 col("Time")
@@ -35,7 +27,7 @@ impl Computer {
                 col("Time").alias("Values"),
             ])
             .alias("Time"),
-        ]);
+        );
         // Relative time, ECL, ECN, Mass
         lazy_frame = lazy_frame.with_columns([
             col("Time")
@@ -192,31 +184,11 @@ pub struct Key<'a> {
 // }
 impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        // for column in self.data_frame.get_columns() {
-        //     for value in column.phys_iter() {
-        //         value.hash(state);
-        //     }
-        // }
-        for value in self.data_frame["OnsetTemperature"].f64().unwrap() {
-            value.map(|value| value.ord()).hash(state);
-        }
-        for value in self.data_frame["TemperatureStep"].f64().unwrap() {
-            value.map(|value| value.ord()).hash(state);
-        }
-        // for value in self.data_frame["Time"].vec_hash() {
-        //     value.hash(state);
-        // }
-        // for series in self.data_frame.iter() {
-        //     for value in series.iter() {
-        //         value.hash(state);
-        //     }
-        // }
-        // self.settings.hash(state);
-        self.settings.filter.hash(state);
         self.settings.filter_onset_temperature.hash(state);
         self.settings.filter_temperature_step.hash(state);
         self.settings.interpolation.hash(state);
 
+        self.settings.filter.hash(state);
         self.settings.ddof.hash(state);
         self.settings.sort.hash(state);
         self.settings.order.hash(state);
