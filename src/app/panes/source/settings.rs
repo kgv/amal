@@ -21,11 +21,14 @@ pub(crate) struct Settings {
     pub(crate) sticky: usize,
     pub(crate) truncate: bool,
 
+    pub(crate) kind: Kind,
     pub(crate) ddof: u8,
     pub(crate) relative: Option<FattyAcid>,
     pub(crate) filter: Filter,
     pub(crate) sort: Sort,
     pub(crate) order: Order,
+
+    pub(crate) group: Group,
 }
 
 impl Settings {
@@ -36,11 +39,14 @@ impl Settings {
             sticky: 1,
             truncate: false,
 
+            kind: Kind::Table,
             ddof: 1,
             relative: None,
             filter: Filter::new(),
             sort: Sort::Time,
             order: Order::Ascending,
+
+            group: Group::FattyAcid,
         }
     }
 
@@ -190,9 +196,10 @@ impl Settings {
             ComboBox::from_id_salt(ui.next_auto_id())
                 .selected_text(format!("{:?}", self.sort))
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.sort, Sort::Mode, "Mode");
-                    ui.selectable_value(&mut self.sort, Sort::Ecl, "ECL");
-                    ui.selectable_value(&mut self.sort, Sort::Time, "Time");
+                    ui.selectable_value(&mut self.sort, Sort::FattyAcid, Sort::FattyAcid.text())
+                        .on_hover_text(Sort::FattyAcid.hover_text());
+                    ui.selectable_value(&mut self.sort, Sort::Time, Sort::Time.text())
+                        .on_hover_text(Sort::Time.hover_text());
                 });
             ui.end_row();
 
@@ -213,6 +220,41 @@ impl Settings {
                 .response
                 .on_hover_text(self.order.hover_text());
             ui.end_row();
+
+            if let Kind::Plot = self.kind {
+                // Plot
+                ui.separator();
+                ui.labeled_separator(RichText::new("Plot").heading());
+                ui.end_row();
+
+                // Group
+                ui.label("Group");
+                ComboBox::from_id_salt(ui.next_auto_id())
+                    .selected_text(self.group.text())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.group,
+                            Group::FattyAcid,
+                            Group::FattyAcid.text(),
+                        )
+                        .on_hover_text(Group::FattyAcid.hover_text());
+                        ui.selectable_value(
+                            &mut self.group,
+                            Group::OnsetTemperature,
+                            Group::OnsetTemperature.text(),
+                        )
+                        .on_hover_text(Group::OnsetTemperature.hover_text());
+                        ui.selectable_value(
+                            &mut self.group,
+                            Group::TemperatureStep,
+                            Group::TemperatureStep.text(),
+                        )
+                        .on_hover_text(Group::TemperatureStep.hover_text());
+                    })
+                    .response
+                    .on_hover_text(self.group.hover_text());
+                ui.end_row();
+            }
         });
     }
 }
@@ -221,6 +263,41 @@ impl Default for Settings {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Group
+#[derive(Clone, Copy, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) enum Group {
+    #[default]
+    FattyAcid,
+    OnsetTemperature,
+    TemperatureStep,
+}
+
+impl Text for Group {
+    fn text(&self) -> &'static str {
+        match self {
+            Self::FattyAcid => "Fatty acid",
+            Self::OnsetTemperature => "Onset temperature",
+            Self::TemperatureStep => "Temperature step",
+        }
+    }
+
+    fn hover_text(&self) -> &'static str {
+        match self {
+            Self::FattyAcid => "Group by fatty acid",
+            Self::OnsetTemperature => "Group by onset temperature",
+            Self::TemperatureStep => "Group by temperature step",
+        }
+    }
+}
+
+/// Kind
+#[derive(Clone, Copy, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) enum Kind {
+    Plot,
+    #[default]
+    Table,
 }
 
 /// Filter
@@ -275,25 +352,22 @@ impl Hash for Mode {
 /// Sort
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) enum Sort {
-    Mode,
+    FattyAcid,
     Time,
-    Ecl,
 }
 
 impl Text for Sort {
     fn text(&self) -> &'static str {
         match self {
-            Self::Mode => "Mode",
+            Self::FattyAcid => "Fatty acid",
             Self::Time => "Time",
-            Self::Ecl => "ECL",
         }
     }
 
-    fn description(&self) -> &'static str {
+    fn hover_text(&self) -> &'static str {
         match self {
-            Self::Mode => "Mode",
-            Self::Time => "Retention time",
-            Self::Ecl => "Equivalent carbon number",
+            Self::FattyAcid => "Sort by atty acid",
+            Self::Time => "Sort by Equivalent carbon number and retention time",
         }
     }
 }
@@ -305,15 +379,15 @@ pub(in crate::app) enum Order {
     Descending,
 }
 
-impl Order {
-    pub(in crate::app) fn text(self) -> &'static str {
+impl Text for Order {
+    fn text(&self) -> &'static str {
         match self {
             Self::Ascending => "Ascending",
             Self::Descending => "Descending",
         }
     }
 
-    pub(in crate::app) fn hover_text(self) -> &'static str {
+    fn hover_text(&self) -> &'static str {
         match self {
             Self::Ascending => "Dscending",
             Self::Descending => "Descending",

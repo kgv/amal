@@ -1,14 +1,18 @@
-use self::{control::Control, settings::Settings};
+use self::{
+    control::Control,
+    plot::PlotView,
+    settings::{Kind, Settings},
+    table::TableView,
+};
 use crate::app::{
     computers::{SourceComputed, SourceKey},
     data::{save, Format},
     localize,
 };
 use egui::{RichText, Ui, Window};
-use egui_phosphor::regular::{ARROWS_HORIZONTAL, FLOPPY_DISK, GEAR};
+use egui_phosphor::regular::{ARROWS_HORIZONTAL, CHART_BAR, FLOPPY_DISK, GEAR, TABLE};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-use table::TableView;
 use tracing::error;
 
 /// Source pane
@@ -37,6 +41,19 @@ impl Pane {
         )
         .on_hover_text(localize!("resize"));
         ui.toggle_value(&mut self.control.open, RichText::new(GEAR).heading());
+        ui.separator();
+        match self.control.settings.kind {
+            Kind::Plot => {
+                if ui.button(RichText::new(TABLE).heading()).clicked() {
+                    self.control.settings.kind = Kind::Table;
+                }
+            }
+            Kind::Table => {
+                if ui.button(RichText::new(CHART_BAR).heading()).clicked() {
+                    self.control.settings.kind = Kind::Plot;
+                }
+            }
+        };
         ui.separator();
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             if ui.button("Parquet").clicked() {
@@ -74,7 +91,22 @@ impl Pane {
                 settings: &self.control.settings,
             })
         });
-        TableView::new(&self.target, &self.control.settings).ui(ui);
+        self.target = ui.memory_mut(|memory| {
+            memory.caches.cache::<SourceComputed>().get(SourceKey {
+                data_frame: &self.source,
+                settings: &self.control.settings,
+            })
+        });
+        match self.control.settings.kind {
+            Kind::Plot => {
+                PlotView::new(&self.target, &self.control.settings)
+                    .unwrap()
+                    .ui(ui);
+            }
+            Kind::Table => {
+                TableView::new(&self.target, &self.control.settings).ui(ui);
+            }
+        };
     }
 
     fn window(&mut self, ui: &mut Ui) {
@@ -90,4 +122,5 @@ impl Pane {
 pub(crate) mod settings;
 
 mod control;
+mod plot;
 mod table;

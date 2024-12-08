@@ -1,6 +1,6 @@
 use crate::{
     app::{
-        panes::source::settings::{Group, Kind, Order, Settings, Sort},
+        panes::source::settings::{Order, Settings, Sort},
         MAX_TEMPERATURE,
     },
     special::expressions::fatty_acid::{ExprExt as _, FattyAcid as _},
@@ -138,39 +138,9 @@ impl Computer {
             sort_options = sort_options.with_order_descending(true);
         };
         lazy_frame = match key.settings.sort {
-            Sort::FattyAcid => lazy_frame.sort_by_fatty_acids(sort_options),
+            Sort::Mode => lazy_frame.sort_by_fatty_acids(sort_options),
+            Sort::Ecl => lazy_frame.sort_by_ecl(sort_options),
             Sort::Time => lazy_frame.sort_by_time(sort_options),
-        };
-
-        lazy_frame = match key.settings.kind {
-            Kind::Plot => {
-                lazy_frame = lazy_frame.select([
-                    col("Mode"),
-                    col("FA"),
-                    col("Time")
-                        .struct_()
-                        .field_by_name("Absolute")
-                        .struct_()
-                        .field_by_name("Mean")
-                        .alias("Time"),
-                    col("Equivalent")
-                        .struct_()
-                        .field_by_name("ECL")
-                        .alias("ECL"),
-                ]);
-                lazy_frame
-                    .group_by([match key.settings.group {
-                        Group::FattyAcid => col("FA"),
-                        Group::OnsetTemperature => {
-                            col("Mode").struct_().field_by_name("OnsetTemperature")
-                        }
-                        Group::TemperatureStep => {
-                            col("Mode").struct_().field_by_name("TemperatureStep")
-                        }
-                    }])
-                    .agg([col("Time"), col("ECL")])
-            }
-            Kind::Table => lazy_frame,
         };
         // Index
         lazy_frame = lazy_frame.cache().with_row_index("Index", None);
@@ -193,24 +163,30 @@ pub struct Key<'a> {
 
 impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.settings.kind.hash(state);
         self.settings.ddof.hash(state);
         self.settings.relative.hash(state);
         self.settings.filter.hash(state);
         self.settings.sort.hash(state);
         self.settings.order.hash(state);
-        self.settings.group.hash(state);
     }
 }
 
 /// Extension methods for [`LazyFrame`]
 trait LazyFrameExt {
+    fn sort_by_ecl(self, sort_options: SortMultipleOptions) -> LazyFrame;
+
     fn sort_by_fatty_acids(self, sort_options: SortMultipleOptions) -> LazyFrame;
 
     fn sort_by_time(self, sort_options: SortMultipleOptions) -> LazyFrame;
 }
 
 impl LazyFrameExt for LazyFrame {
+    fn sort_by_ecl(self, sort_options: SortMultipleOptions) -> LazyFrame {
+        self.sort(["Mode"], sort_options.clone()).select([all()
+            .sort_by(&[col("ECL")], sort_options)
+            .over([col("Mode")])])
+    }
+
     fn sort_by_fatty_acids(self, sort_options: SortMultipleOptions) -> LazyFrame {
         self.sort_by_exprs(
             [
@@ -226,17 +202,7 @@ impl LazyFrameExt for LazyFrame {
 
     fn sort_by_time(self, sort_options: SortMultipleOptions) -> LazyFrame {
         self.sort(["Mode"], sort_options.clone()).select([all()
-            .sort_by(
-                &[
-                    col("Equivalent").struct_().field_by_name("ECL"),
-                    col("Time")
-                        .struct_()
-                        .field_by_name("Absolute")
-                        .struct_()
-                        .field_by_name("Mean"),
-                ],
-                sort_options,
-            )
+            .sort_by(&[col("Time")], sort_options)
             .over([col("Mode")])])
     }
 }

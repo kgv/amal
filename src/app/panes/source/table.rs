@@ -6,16 +6,19 @@ use egui::{vec2, Frame, Grid, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
 use polars::prelude::*;
 
+const RETENTION_TIME: usize = 3;
+const EQUIVALENT: usize = 5;
+
 const INDEX: usize = 0;
 const MODE: usize = 1;
 const FA: usize = 2;
-const TIME: usize = 3;
-const TEMPERATURE: usize = 4;
-const ECL: usize = 5;
-const FCL: usize = 6;
-const ECN: usize = 7;
-const MASS: usize = 8;
-const SLOPE: usize = 9;
+const ABSOLUTE_TIME: usize = 3;
+const RELATIVE_TIME: usize = 4;
+const TEMPERATURE: usize = 5;
+const ECL: usize = 6;
+const FCL: usize = 7;
+const ECN: usize = 8;
+const MASS: usize = 9;
 
 const MARGIN: Vec2 = vec2(4.0, 0.0);
 
@@ -41,7 +44,11 @@ impl TableView<'_> {
         let id_salt = Id::new("Table");
         let height = ui.text_style_height(&TextStyle::Heading);
         let num_rows = self.data_frame.height() as _;
-        let num_columns = self.data_frame.width();
+        let num_columns = self
+            .data_frame
+            .unnest(["Time", "Equivalent"])
+            .unwrap()
+            .width();
         Table::new()
             .id_salt(id_salt)
             .num_rows(num_rows)
@@ -50,7 +57,13 @@ impl TableView<'_> {
                 num_columns
             ])
             .num_sticky_cols(self.settings.sticky)
-            .headers([HeaderRow::new(height)])
+            .headers([
+                HeaderRow {
+                    height,
+                    groups: vec![0..1, 1..2, 2..3, 3..5, 5..6, 6..9, 9..10],
+                },
+                HeaderRow::new(height),
+            ])
             .auto_size_mode(AutoSizeMode::OnParentResize)
             .show(ui, self);
     }
@@ -60,35 +73,45 @@ impl TableView<'_> {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {
-            (0, INDEX) => {
+            // Top
+            (0, 0) => {
                 ui.heading("Index");
             }
-            (0, MODE) => {
+            (0, 1) => {
                 ui.heading("Mode");
             }
-            (0, FA) => {
-                ui.heading("FA");
+            (0, 2) => {
+                ui.heading("Fatty acid");
             }
-            (0, TIME) => {
-                ui.heading("Time");
+            (0, 3) => {
+                ui.heading("Retention time");
             }
-            (0, TEMPERATURE) => {
+            (0, 4) => {
                 ui.heading("Temperature");
             }
-            (0, ECL) => {
-                ui.heading("ECL");
+            (0, 5) => {
+                ui.heading("Equivalent");
             }
-            (0, FCL) => {
-                ui.heading("FCL");
-            }
-            (0, ECN) => {
-                ui.heading("ECN");
-            }
-            (0, MASS) => {
+            (0, 6) => {
                 ui.heading("Mass");
             }
-            (0, SLOPE) => {
-                ui.heading("Slope");
+            // Bottom
+            (1, 0..3) => {}
+            (1, 3) => {
+                ui.heading("Absolute");
+            }
+            (1, 4) => {
+                ui.heading("Relative");
+            }
+            (1, 5) => {}
+            (1, 6) => {
+                ui.heading("ECL");
+            }
+            (1, 7) => {
+                ui.heading("FCL");
+            }
+            (1, 8) => {
+                ui.heading("ECN");
             }
             _ => {} // _ => unreachable!(),
         }
@@ -117,31 +140,47 @@ impl TableView<'_> {
                 ui.label(fatty_acid.to_string())
                     .on_hover_text(fatty_acid.label());
             }
-            (row, TIME) => {
+            (row, ABSOLUTE_TIME) => {
                 let time = self.data_frame["Time"].struct_().unwrap();
-                let means = time.field_by_name("Mean").unwrap();
+                let absolute = time.field_by_name("Absolute").unwrap();
+                let absolute = absolute.struct_().unwrap();
+                let mean = absolute.field_by_name("Mean").unwrap();
                 ui.add(
-                    FloatValue::new(means.f64().unwrap().get(row))
+                    FloatValue::new(mean.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision)),
                 )
                 .on_hover_ui(|ui| {
-                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                        // Absolute
-                        ui.label("Absolute");
-                        ui.horizontal(|ui| {
-                            ui.label(means.str_value(row).unwrap());
-                            ui.label("±");
-                            let standard_deviations =
-                                time.field_by_name("StandardDeviation").unwrap();
-                            ui.label(standard_deviations.str_value(row).unwrap());
-                        });
-                        ui.end_row();
-                        // Relative
-                        let relatives = time.field_by_name("Relative").unwrap();
-                        ui.label("Relative");
-                        ui.label(relatives.str_value(row).unwrap());
+                    let standard_deviation = absolute.field_by_name("StandardDeviation").unwrap();
+                    ui.horizontal(|ui| {
+                        ui.label(mean.str_value(row).unwrap());
+                        ui.label("±");
+                        ui.label(standard_deviation.str_value(row).unwrap());
+                    });
+                })
+                .on_hover_ui(|ui| {
+                    ui.heading("Repetitions");
+                    let values = absolute
+                        .field_by_name("Values")
+                        .unwrap()
+                        .list()
+                        .unwrap()
+                        .get_as_series(row)
+                        .unwrap();
+                    ui.horizontal(|ui| {
+                        for value in values.iter() {
+                            ui.label(value.to_string());
+                        }
                     });
                 });
+            }
+            (row, RELATIVE_TIME) => {
+                let time = self.data_frame["Time"].struct_().unwrap();
+                let relative = time.field_by_name("Relative").unwrap();
+                ui.add(
+                    FloatValue::new(relative.f64().unwrap().get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                );
             }
             (row, TEMPERATURE) => {
                 let temperature = &self.data_frame["Temperature"];
@@ -152,7 +191,8 @@ impl TableView<'_> {
                 );
             }
             (row, ECL) => {
-                let ecl = &self.data_frame[ECL];
+                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
+                let ecl = equivalent.field_by_name("ECL").unwrap();
                 ui.add(
                     FloatValue::new(ecl.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
@@ -160,12 +200,18 @@ impl TableView<'_> {
                 );
             }
             (row, FCL) => {
-                let fcl = &self.data_frame[FCL];
+                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
+                let fcl = equivalent.field_by_name("FCL").unwrap();
                 ui.add(
                     FloatValue::new(fcl.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
                 );
+            }
+            (row, ECN) => {
+                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
+                let ecn = equivalent.field_by_name("ECN").unwrap();
+                ui.label(ecn.str_value(row).unwrap());
             }
             (row, MASS) => {
                 let mass = self.data_frame["Mass"].struct_().unwrap();
@@ -191,37 +237,37 @@ impl TableView<'_> {
                     });
                 });
             }
-            (row, SLOPE) => {
-                let meta = self.data_frame["Meta"].struct_().unwrap();
-                let slope = meta.field_by_name("Slope").unwrap();
-                ui.add(
-                    FloatValue::new(slope.f64().unwrap().get(row))
-                        .precision(Some(self.settings.precision))
-                        .hover(),
-                )
-                .on_hover_ui(|ui| {
-                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                        ui.label("Temperature distance");
-                        let temperature_distance =
-                            meta.field_by_name("TemperatureDistance").unwrap();
-                        ui.label(temperature_distance.str_value(row).unwrap());
-                        ui.end_row();
+            // (row, SLOPE) => {
+            //     let meta = self.data_frame["Meta"].struct_().unwrap();
+            //     let slope = meta.field_by_name("Slope").unwrap();
+            //     ui.add(
+            //         FloatValue::new(slope.f64().unwrap().get(row))
+            //             .precision(Some(self.settings.precision))
+            //             .hover(),
+            //     )
+            //     .on_hover_ui(|ui| {
+            //         Grid::new(ui.next_auto_id()).show(ui, |ui| {
+            //             ui.label("Temperature distance");
+            //             let temperature_distance =
+            //                 meta.field_by_name("TemperatureDistance").unwrap();
+            //             ui.label(temperature_distance.str_value(row).unwrap());
+            //             ui.end_row();
 
-                        ui.label("Time distance");
-                        let time_distance = meta.field_by_name("TimeDistance").unwrap();
-                        ui.label(time_distance.str_value(row).unwrap());
-                        ui.end_row();
+            //             ui.label("Time distance");
+            //             let time_distance = meta.field_by_name("TimeDistance").unwrap();
+            //             ui.label(time_distance.str_value(row).unwrap());
+            //             ui.end_row();
 
-                        ui.label("Slope");
-                        ui.label(slope.str_value(row).unwrap());
+            //             ui.label("Slope");
+            //             ui.label(slope.str_value(row).unwrap());
 
-                        // ui.label("RCOOCH3");
-                        // ui.label(rcooch3.str_value(row).unwrap());
-                    });
-                });
-            }
+            //             // ui.label("RCOOCH3");
+            //             // ui.label(rcooch3.str_value(row).unwrap());
+            //         });
+            //     });
+            // }
             (row, column) => {
-                let value = self.data_frame[column].get(row).unwrap().str_value();
+                let value = self.data_frame[column - 1].get(row).unwrap().str_value();
                 ui.label(value);
             }
         }
