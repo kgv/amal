@@ -39,12 +39,12 @@ impl Computer {
                     .with_fields(vec![relative_time(key.settings)
                         .over(["Mode"])
                         .alias("Relative")])?,
-                ecl().over(["Mode"]).alias("ECL"),
                 (col("Mode").struct_().field_by_name("OnsetTemperature")
                     + col("Time").struct_().field_by_name("Mean")
                         * col("Mode").struct_().field_by_name("TemperatureStep"))
                 .clip_max(lit(MAX_TEMPERATURE))
                 .alias("Temperature"),
+                ecl().over(["Mode"]).alias("ECL"),
             ])
             .with_columns([
                 (col("ECL") - col("FA").fa().c()).alias("FCL"),
@@ -222,7 +222,6 @@ impl LazyFrameExt for LazyFrame {
                 col("FA").fa().unsaturation(),
                 col("FA").fa().indices(),
                 col("FA").fa().bounds(),
-                // col("FA").fa().bounds().list().eval(-col(""), true),
             ],
             sort_options,
         )
@@ -233,25 +232,6 @@ impl LazyFrameExt for LazyFrame {
             .sort_by(&[col("Time")], sort_options)
             .over([col("Mode")])])
     }
-}
-
-// col("FA")
-//                 .fa()
-//                 .c()
-//                 .eq(lit(18))
-//                 .and(col("FA").fa().saturated()),
-fn distance(left: Expr, right: Expr) -> Expr {
-    (col("Time")
-        .struct_()
-        .field_by_name("Mean")
-        .filter(left)
-        .first()
-        - col("Time")
-            .struct_()
-            .field_by_name("Mean")
-            .filter(right)
-            .first())
-    .abs()
 }
 
 fn relative_time(settings: &Settings) -> Expr {
