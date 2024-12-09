@@ -2,7 +2,7 @@ use super::Settings;
 use crate::{
     app::panes::widgets::float::FloatValue, special::columns::fatty_acids::ColumnExt as _,
 };
-use egui::{text::LayoutJob, vec2, Frame, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
+use egui::{vec2, Frame, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
 use polars::prelude::*;
 
@@ -126,12 +126,22 @@ impl TableView<'_> {
                 });
             }
             (row, ECL) => {
-                let ecl = self.data_frame["ECL"].f64().unwrap();
+                let ecl = self.data_frame["ECL"].struct_().unwrap();
+                let delta = ecl.field_by_name("Delta").unwrap();
                 ui.add(
-                    FloatValue::new(ecl.get(row))
+                    FloatValue::new(delta.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
-                );
+                )
+                .on_hover_ui(|ui| {
+                    let from = ecl.field_by_name("From").unwrap();
+                    let to = ecl.field_by_name("To").unwrap();
+                    ui.horizontal(|ui| {
+                        ui.label(to.str_value(row).unwrap());
+                        ui.label("-");
+                        ui.label(from.str_value(row).unwrap());
+                    });
+                });
             }
             (row, column) => {
                 let value = self.data_frame[column].get(row).unwrap();

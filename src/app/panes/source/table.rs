@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use super::Settings;
 use crate::{
     app::panes::widgets::float::FloatValue, special::columns::fatty_acids::ColumnExt as _,
@@ -9,6 +11,15 @@ use polars::prelude::*;
 const RETENTION_TIME: usize = 3;
 const EQUIVALENT: usize = 5;
 
+const INDEX_RANGE: Range<usize> = 0..1;
+const MODE_RANGE: Range<usize> = INDEX_RANGE.end..INDEX_RANGE.end + 1;
+const FA_RANGE: Range<usize> = MODE_RANGE.end..MODE_RANGE.end + 1;
+const TIME_RANGE: Range<usize> = FA_RANGE.end..FA_RANGE.end + 2;
+const TEMPERATURE_RANGE: Range<usize> = TIME_RANGE.end..TIME_RANGE.end + 1;
+const EQUIVALENT_RANGE: Range<usize> = TEMPERATURE_RANGE.end..TEMPERATURE_RANGE.end + 3;
+const MASS_RANGE: Range<usize> = EQUIVALENT_RANGE.end..EQUIVALENT_RANGE.end + 1;
+const META_RANGE: Range<usize> = MASS_RANGE.end..MASS_RANGE.end + 3;
+
 const INDEX: usize = 0;
 const MODE: usize = 1;
 const FA: usize = 2;
@@ -19,6 +30,10 @@ const ECL: usize = 6;
 const FCL: usize = 7;
 const ECN: usize = 8;
 const MASS: usize = 9;
+const DELTA: usize = 10;
+const TANGENT: usize = 11;
+const ANGLE: usize = 12;
+const LEN: usize = 13;
 
 const MARGIN: Vec2 = vec2(4.0, 0.0);
 
@@ -44,11 +59,7 @@ impl TableView<'_> {
         let id_salt = Id::new("Table");
         let height = ui.text_style_height(&TextStyle::Heading);
         let num_rows = self.data_frame.height() as _;
-        let num_columns = self
-            .data_frame
-            .unnest(["Time", "Equivalent"])
-            .unwrap()
-            .width();
+        let num_columns = LEN;
         Table::new()
             .id_salt(id_salt)
             .num_rows(num_rows)
@@ -60,7 +71,16 @@ impl TableView<'_> {
             .headers([
                 HeaderRow {
                     height,
-                    groups: vec![0..1, 1..2, 2..3, 3..5, 5..6, 6..9, 9..10],
+                    groups: vec![
+                        INDEX_RANGE,
+                        MODE_RANGE,
+                        FA_RANGE,
+                        TIME_RANGE,
+                        TEMPERATURE_RANGE,
+                        EQUIVALENT_RANGE,
+                        MASS_RANGE,
+                        META_RANGE,
+                    ],
                 },
                 HeaderRow::new(height),
             ])
@@ -95,6 +115,9 @@ impl TableView<'_> {
             (0, 6) => {
                 ui.heading("Mass");
             }
+            (0, 7) => {
+                ui.heading("Meta");
+            }
             // Bottom
             (1, 0..3) => {}
             (1, 3) => {
@@ -104,14 +127,24 @@ impl TableView<'_> {
                 ui.heading("Relative");
             }
             (1, 5) => {}
-            (1, 6) => {
+            (1, ECL) => {
                 ui.heading("ECL");
             }
-            (1, 7) => {
+            (1, FCL) => {
                 ui.heading("FCL");
             }
-            (1, 8) => {
+            (1, ECN) => {
                 ui.heading("ECN");
+            }
+            (1, MASS) => {}
+            (1, DELTA) => {
+                ui.heading("Delta");
+            }
+            (1, TANGENT) => {
+                ui.heading("Tan");
+            }
+            (1, ANGLE) => {
+                ui.heading("Angle");
             }
             _ => {} // _ => unreachable!(),
         }
@@ -237,35 +270,33 @@ impl TableView<'_> {
                     });
                 });
             }
-            // (row, SLOPE) => {
-            //     let meta = self.data_frame["Meta"].struct_().unwrap();
-            //     let slope = meta.field_by_name("Slope").unwrap();
-            //     ui.add(
-            //         FloatValue::new(slope.f64().unwrap().get(row))
-            //             .precision(Some(self.settings.precision))
-            //             .hover(),
-            //     )
-            //     .on_hover_ui(|ui| {
-            //         Grid::new(ui.next_auto_id()).show(ui, |ui| {
-            //             ui.label("Temperature distance");
-            //             let temperature_distance =
-            //                 meta.field_by_name("TemperatureDistance").unwrap();
-            //             ui.label(temperature_distance.str_value(row).unwrap());
-            //             ui.end_row();
-
-            //             ui.label("Time distance");
-            //             let time_distance = meta.field_by_name("TimeDistance").unwrap();
-            //             ui.label(time_distance.str_value(row).unwrap());
-            //             ui.end_row();
-
-            //             ui.label("Slope");
-            //             ui.label(slope.str_value(row).unwrap());
-
-            //             // ui.label("RCOOCH3");
-            //             // ui.label(rcooch3.str_value(row).unwrap());
-            //         });
-            //     });
-            // }
+            (row, DELTA) => {
+                let equivalent = self.data_frame["Meta"].struct_().unwrap();
+                let dx = equivalent.field_by_name("Delta").unwrap();
+                ui.add(
+                    FloatValue::new(dx.f64().unwrap().get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                );
+            }
+            (row, TANGENT) => {
+                let equivalent = self.data_frame["Meta"].struct_().unwrap();
+                let slope = equivalent.field_by_name("Tangent").unwrap();
+                ui.add(
+                    FloatValue::new(slope.f64().unwrap().get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                );
+            }
+            (row, ANGLE) => {
+                let equivalent = self.data_frame["Meta"].struct_().unwrap();
+                let angle = equivalent.field_by_name("Angle").unwrap();
+                ui.add(
+                    FloatValue::new(angle.f64().unwrap().get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                );
+            }
             (row, column) => {
                 let value = self.data_frame[column - 1].get(row).unwrap().str_value();
                 ui.label(value);

@@ -84,16 +84,21 @@ impl Computer {
             col("From").struct_().field_by_name("FA").name().keep(),
             col("To").struct_().field_by_name("FA").name().keep(),
             as_struct(vec![
-                col("ToTime").alias("To"),
                 col("FromTime").alias("From"),
+                col("ToTime").alias("To"),
                 (col("ToTime") - col("FromTime"))
                     .over([col("From").struct_().field_by_name("Mode")])
                     .alias("Delta"),
             ])
             .alias("Time"),
-            (col("ToECL") - col("FromECL"))
-                .over([col("From").struct_().field_by_name("Mode")])
-                .alias("ECL"),
+            as_struct(vec![
+                col("FromECL").alias("From"),
+                col("ToECL").alias("To"),
+                (col("ToECL") - col("FromECL"))
+                    .over([col("From").struct_().field_by_name("Mode")])
+                    .alias("Delta"),
+            ])
+            .alias("ECL"),
         ]);
         // Sort
         let mut sort_options = SortMultipleOptions::new().with_nulls_last(true);
@@ -102,11 +107,21 @@ impl Computer {
         };
         lazy_frame = match key.settings.sort {
             Sort::Ecl => lazy_frame.sort_by_exprs(
-                [col("ECL").abs().median().over([col("Mode")])],
+                [col("ECL")
+                    .struct_()
+                    .field_by_name("Delta")
+                    .abs()
+                    .median()
+                    .over([col("Mode")])],
                 sort_options,
             ),
             Sort::Time => lazy_frame.sort_by_exprs(
-                [col("Time").abs().median().over([col("Mode")])],
+                [col("Time")
+                    .struct_()
+                    .field_by_name("Delta")
+                    .abs()
+                    .median()
+                    .over([col("Mode")])],
                 sort_options,
             ),
         };

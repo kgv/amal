@@ -2,7 +2,7 @@
 edition = "2021"
 name = "amal"
 rust-version = "1.76"
-version = "0.5.1"
+version = "0.5.2"
 
 [dependencies]
 anyhow = "1.0.94"
@@ -23,8 +23,7 @@ egui_tiles = "0.10.1"
 itertools = "0.13.0"
 log = "0.4.22"
 molecule = { git = "https://github.com/ippras/molecule" }
-# polars = { git = "https://github.com/pola-rs/polars", rev = "c92612afb11d1ca355cfe03530df6c3d301082a1", features = [
-polars = { version = "0.45.0", features = [
+polars = { version = "0.45.1", features = [
     "abs",
     "cross_join",
     "diagonal_concat",
@@ -38,6 +37,7 @@ polars = { version = "0.45.0", features = [
     "lazy",
     "list_eval",
     "round_series",
+    "trigonometry",
     #
     "fmt_no_tty",
     "parquet",

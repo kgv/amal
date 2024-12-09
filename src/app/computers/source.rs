@@ -7,7 +7,10 @@ use crate::{
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use polars::prelude::*;
-use std::hash::{Hash, Hasher};
+use std::{
+    f64::NAN,
+    hash::{Hash, Hasher},
+};
 
 /// Source computed
 pub(crate) type Computed = FrameCache<DataFrame, Computer>;
@@ -33,8 +36,25 @@ impl Computer {
                 relative_time(key.settings)
                     .over(["Mode"])
                     .alias("RelativeTime"),
+                // Temperature
+                (col("Mode").struct_().field_by_name("OnsetTemperature")
+                    + col("TimeMean") * col("Mode").struct_().field_by_name("TemperatureStep"))
+                .clip_max(lit(MAX_TEMPERATURE))
+                .alias("Temperature"),
+                // FCL
+                fcl().over(["Mode"]).alias("FCL"),
                 // ECL
                 ecl().over(["Mode"]).alias("ECL"),
+                // ECN
+                col("FA").fa().ecn().alias("ECN"),
+            ])
+            .with_columns([
+                // Delta
+                delta(col("TimeMean")).over(["Mode"]).alias("Delta"),
+                // Tangent
+                tangent().over(["Mode"]).alias("Tangent"),
+                // Angle
+                angle().over(["Mode"]).alias("Angle"),
             ])
             .select([
                 col("Mode"),
@@ -51,17 +71,9 @@ impl Computer {
                 ])
                 .alias("Time"),
                 // Temperature
-                (col("Mode").struct_().field_by_name("OnsetTemperature")
-                    + col("TimeMean") * col("Mode").struct_().field_by_name("TemperatureStep"))
-                .clip_max(lit(MAX_TEMPERATURE))
-                .alias("Temperature"),
+                col("Temperature"),
                 // Equivalent
-                as_struct(vec![
-                    col("ECL"),
-                    (col("ECL") - col("FA").fa().c()).alias("FCL"),
-                    col("FA").fa().ecn().alias("ECN"),
-                ])
-                .alias("Equivalent"),
+                as_struct(vec![col("ECL"), col("FCL"), col("ECN")]).alias("Equivalent"),
                 // Mass
                 as_struct(vec![
                     col("FA").fa().mass().alias("RCOOH"),
@@ -69,6 +81,8 @@ impl Computer {
                     col("FA").fa().rcooch3().mass().alias("RCOOCH3"),
                 ])
                 .alias("Mass"),
+                // Meta
+                as_struct(vec![col("Delta"), col("Tangent"), col("Angle")]).alias("Meta"),
             ]);
         // Filter
         if let Some(onset_temperature) = key.settings.filter.mode.onset_temperature {
@@ -243,14 +257,33 @@ fn relative_time(settings: &Settings) -> Expr {
 }
 
 fn ecl() -> Expr {
+    saturated(col("FA").fa().c()).forward_fill(None) + fcl()
+}
+
+fn fcl() -> Expr {
     ternary_expr(
         col("FA").fa().saturated(),
-        col("FA").fa().c(),
-        ternary_expr(col("FA").fa().saturated(), col("FA").fa().c(), lit(NULL)).forward_fill(None)
-            + (col("TimeMean") - saturated(col("TimeMean")).forward_fill(None))
-                / (saturated(col("TimeMean")).backward_fill(None)
-                    - saturated(col("TimeMean")).forward_fill(None)),
+        lit(0),
+        (col("TimeMean") - saturated(col("TimeMean")).forward_fill(None))
+            / (saturated(col("TimeMean")).backward_fill(None)
+                - saturated(col("TimeMean")).forward_fill(None)),
     )
+}
+
+fn angle() -> Expr {
+    tangent().arctan().degrees()
+}
+
+fn tangent() -> Expr {
+    ternary_expr(
+        col("FA").fa().saturated(),
+        lit(NAN),
+        delta(col("ECL")) / delta(col("TimeMean")),
+    )
+}
+
+fn delta(expr: Expr) -> Expr {
+    saturated(expr.clone()).backward_fill(None) - saturated(expr).forward_fill(None)
 }
 
 fn saturated(expr: Expr) -> Expr {
