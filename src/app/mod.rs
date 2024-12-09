@@ -205,90 +205,92 @@ impl App {
     fn top_panel(&mut self, ctx: &egui::Context) {
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             bar(ui, |ui| {
-                ui.light_dark_button(SIZE);
-                ui.separator();
-                ui.toggle_value(&mut self.reactive, RichText::new(ROCKET).size(SIZE))
-                    .on_hover_text("reactive")
-                    .on_hover_text(localize!("reactive_description_enabled"))
-                    .on_disabled_hover_text(localize!("reactive_description_disabled"));
-                ui.separator();
-                if ui
-                    .button(RichText::new(TRASH).size(SIZE))
-                    .on_hover_text(localize!("reset_application"))
-                    .clicked()
-                {
-                    *self = Self {
-                        reactive: self.reactive,
-                        ..Default::default()
-                    };
-                }
-                ui.separator();
-                if ui
-                    .button(RichText::new(ARROWS_CLOCKWISE).size(SIZE))
-                    .on_hover_text(localize!("reset_gui"))
-                    .clicked()
-                {
-                    ui.memory_mut(|memory| *memory = Default::default());
-                }
-                ui.separator();
-                ui.menu_button(RichText::new(DATABASE).size(SIZE), |ui| {
+                ScrollArea::horizontal().show(ui, |ui| {
+                    ui.light_dark_button(SIZE);
+                    ui.separator();
+                    ui.toggle_value(&mut self.reactive, RichText::new(ROCKET).size(SIZE))
+                        .on_hover_text("reactive")
+                        .on_hover_text(localize!("reactive_description_enabled"))
+                        .on_disabled_hover_text(localize!("reactive_description_disabled"));
+                    ui.separator();
                     if ui
-                        .button(RichText::new(format!("{DATABASE} IPPRAS/Agilent")).heading())
+                        .button(RichText::new(TRASH).size(SIZE))
+                        .on_hover_text(localize!("reset_application"))
                         .clicked()
                     {
-                        let data_frame = bincode::deserialize(AGILENT).unwrap();
-                        self.tree.insert_pane(Pane::source(data_frame));
-                        let data_frame: DataFrame = bincode::deserialize(AGILENT).unwrap();
-                        self.tree.insert_pane(Pane::distance(data_frame));
-                        ui.close_menu();
+                        *self = Self {
+                            reactive: self.reactive,
+                            ..Default::default()
+                        };
                     }
+                    ui.separator();
+                    if ui
+                        .button(RichText::new(ARROWS_CLOCKWISE).size(SIZE))
+                        .on_hover_text(localize!("reset_gui"))
+                        .clicked()
+                    {
+                        ui.memory_mut(|memory| *memory = Default::default());
+                    }
+                    ui.separator();
+                    ui.menu_button(RichText::new(DATABASE).size(SIZE), |ui| {
+                        if ui
+                            .button(RichText::new(format!("{DATABASE} IPPRAS/Agilent")).heading())
+                            .clicked()
+                        {
+                            let data_frame = bincode::deserialize(AGILENT).unwrap();
+                            self.tree.insert_pane(Pane::source(data_frame));
+                            let data_frame: DataFrame = bincode::deserialize(AGILENT).unwrap();
+                            self.tree.insert_pane(Pane::distance(data_frame));
+                            ui.close_menu();
+                        }
+                    });
+                    ui.separator();
+                    if ui
+                        .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(SIZE))
+                        .on_hover_text(localize!("vertical"))
+                        .clicked()
+                    {
+                        if let Some(id) = self.tree.root {
+                            if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
+                                container.set_kind(ContainerKind::Vertical);
+                            }
+                        }
+                    }
+                    if ui
+                        .button(RichText::new(SQUARE_SPLIT_HORIZONTAL).size(SIZE))
+                        .on_hover_text(localize!("horizontal"))
+                        .clicked()
+                    {
+                        if let Some(id) = self.tree.root {
+                            if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
+                                container.set_kind(ContainerKind::Horizontal);
+                            }
+                        }
+                    }
+                    if ui
+                        .button(RichText::new(GRID_FOUR).size(SIZE))
+                        .on_hover_text(localize!("grid"))
+                        .clicked()
+                    {
+                        if let Some(id) = self.tree.root {
+                            if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
+                                container.set_kind(ContainerKind::Grid);
+                            }
+                        }
+                    }
+                    if ui
+                        .button(RichText::new(TABS).size(SIZE))
+                        .on_hover_text(localize!("tabs"))
+                        .clicked()
+                    {
+                        if let Some(id) = self.tree.root {
+                            if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
+                                container.set_kind(ContainerKind::Tabs);
+                            }
+                        }
+                    }
+                    ui.separator();
                 });
-                ui.separator();
-                if ui
-                    .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(SIZE))
-                    .on_hover_text(localize!("vertical"))
-                    .clicked()
-                {
-                    if let Some(id) = self.tree.root {
-                        if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                            container.set_kind(ContainerKind::Vertical);
-                        }
-                    }
-                }
-                if ui
-                    .button(RichText::new(SQUARE_SPLIT_HORIZONTAL).size(SIZE))
-                    .on_hover_text(localize!("horizontal"))
-                    .clicked()
-                {
-                    if let Some(id) = self.tree.root {
-                        if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                            container.set_kind(ContainerKind::Horizontal);
-                        }
-                    }
-                }
-                if ui
-                    .button(RichText::new(GRID_FOUR).size(SIZE))
-                    .on_hover_text(localize!("grid"))
-                    .clicked()
-                {
-                    if let Some(id) = self.tree.root {
-                        if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                            container.set_kind(ContainerKind::Grid);
-                        }
-                    }
-                }
-                if ui
-                    .button(RichText::new(TABS).size(SIZE))
-                    .on_hover_text(localize!("tabs"))
-                    .clicked()
-                {
-                    if let Some(id) = self.tree.root {
-                        if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                            container.set_kind(ContainerKind::Tabs);
-                        }
-                    }
-                }
-                ui.separator();
             });
         });
     }

@@ -195,25 +195,6 @@ impl Hash for Key<'_> {
     }
 }
 
-// col("FA")
-//                 .fa()
-//                 .c()
-//                 .eq(lit(18))
-//                 .and(col("FA").fa().saturated()),
-fn diff(left: Expr, right: Expr) -> Expr {
-    (col("Time")
-        .struct_()
-        .field_by_name("Mean")
-        .filter(left)
-        .first()
-        - col("Time")
-            .struct_()
-            .field_by_name("Mean")
-            .filter(right)
-            .first())
-    .abs()
-}
-
 fn relative_time() -> Expr {
     col("Time").struct_().field_by_name("Mean")
         / col("Time")

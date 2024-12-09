@@ -109,29 +109,6 @@ impl Computer {
             lazy_frame = lazy_frame.filter(expr);
         }
         // Interpolate
-        // if key.settings.interpolate {
-        //     // lazy_frame = lazy_frame.with_columns([
-        //     //     // col("Time").over(["Mode"]),
-        //     //     col("Time")
-        //     //         .struct_()
-        //     //         .field_by_name("Mean")
-        //     //         .fill_null(lit(0.0))
-        //     //         .over(["Mode"])
-        //     //         .alias("INTERPOLATE_TIME"),
-        //     //     col("ECL")
-        //     //         // .interpolate_by(col("ECN"))
-        //     //         .interpolate(
-        //     //             col("Time")
-        //     //                 .struct_()
-        //     //                 .field_by_name("Mean")
-        //     //                 .fill_null(lit(0.0)),
-        //     //         )
-        //     //         // .interpolate(InterpolationMethod::Linear)
-        //     //         .over(["Mode"])
-        //     //         .alias("INTERPOLATE_ECL"),
-        //     // ]);
-        // }
-
         // Sort
         let mut sort_options = SortMultipleOptions::new().with_nulls_last(true);
         if key.settings.order == Order::Descending {

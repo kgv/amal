@@ -69,10 +69,10 @@ impl TableView<'_> {
                 ui.heading("To");
             }
             (0, TIME) => {
-                ui.heading("Time");
+                ui.heading("Δ Time");
             }
             (0, ECL) => {
-                ui.heading("ECL");
+                ui.heading("Δ ECL");
             }
             _ => {} // _ => unreachable!(),
         }
