@@ -17,7 +17,7 @@ pub(crate) type Computed = FrameCache<DataFrame, Computer>;
 pub(crate) struct Computer;
 
 impl Computer {
-    fn try_compute(&mut self, key: Key<'_>) -> PolarsResult<DataFrame> {
+    fn try_compute(&mut self, key: Key<'_>) -> PolarsResult<LazyFrame> {
         let mut lazy_frame = key.data_frame.clone().lazy();
         // Meta
         lazy_frame = lazy_frame.with_columns([
@@ -118,7 +118,13 @@ impl Computer {
             Sort::FattyAcid => lazy_frame.sort_by_fatty_acids(sort_options),
             Sort::Time => lazy_frame.sort_by_time(sort_options),
         };
+        Ok(lazy_frame)
+    }
+}
 
+impl ComputerMut<Key<'_>, DataFrame> for Computer {
+    fn compute(&mut self, key: Key<'_>) -> DataFrame {
+        let mut lazy_frame = self.try_compute(key).expect("compute source");
         lazy_frame = match key.settings.kind {
             Kind::Plot => {
                 lazy_frame = lazy_frame.select([
@@ -151,13 +157,7 @@ impl Computer {
         };
         // Index
         lazy_frame = lazy_frame.cache().with_row_index("Index", None);
-        lazy_frame.collect()
-    }
-}
-
-impl ComputerMut<Key<'_>, DataFrame> for Computer {
-    fn compute(&mut self, key: Key<'_>) -> DataFrame {
-        self.try_compute(key).expect("compute source")
+        lazy_frame.collect().expect("collect source")
     }
 }
 

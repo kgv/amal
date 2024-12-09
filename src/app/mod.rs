@@ -239,8 +239,6 @@ impl App {
                         {
                             let data_frame = bincode::deserialize(AGILENT).unwrap();
                             self.tree.insert_pane(Pane::source(data_frame));
-                            let data_frame: DataFrame = bincode::deserialize(AGILENT).unwrap();
-                            self.tree.insert_pane(Pane::distance(data_frame));
                             ui.close_menu();
                         }
                     });
@@ -296,6 +294,14 @@ impl App {
     }
 }
 
+impl App {
+    fn distance(&mut self, ctx: &egui::Context) {
+        if let Some(data_frame) = ctx.data_mut(|data| data.remove_temp(Id::new("Distance"))) {
+            self.tree.insert_pane(Pane::distance(data_frame));
+        }
+    }
+}
+
 impl eframe::App for App {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
@@ -304,6 +310,7 @@ impl eframe::App for App {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.distance(ctx);
         self.panels(ctx);
         self.drag_and_drop(ctx);
         if self.reactive {

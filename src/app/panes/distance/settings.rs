@@ -5,7 +5,8 @@ use crate::{
         mode::ColumnExt as _,
     },
 };
-use egui::{emath::Float, ComboBox, Grid, Slider, Ui, WidgetText};
+use egui::{emath::Float, ComboBox, Grid, RichText, Slider, Ui, WidgetText};
+use egui_ext::LabeledSeparator;
 use egui_phosphor::regular::TRASH;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -26,7 +27,6 @@ pub(crate) struct Settings {
     pub(crate) sticky: usize,
     pub(crate) truncate: bool,
 
-    pub(crate) ddof: u8,
     pub(crate) sort: Sort,
     pub(crate) order: Order,
 
@@ -43,7 +43,6 @@ impl Settings {
             resizable: false,
             sticky: 1,
             truncate: false,
-            ddof: 1,
             sort: Sort::Ecl,
             order: Order::Descending,
 
@@ -71,17 +70,9 @@ impl Settings {
             ui.checkbox(&mut self.truncate, "");
             ui.end_row();
 
+            // Filter
             ui.separator();
-            ui.separator();
-            ui.end_row();
-
-            // https://numpy.org/devdocs/reference/generated/numpy.std.html
-            ui.label(localize!("ddof"));
-            ui.add(Slider::new(&mut self.ddof, 0..=2));
-            ui.end_row();
-
-            ui.separator();
-            ui.separator();
+            ui.labeled_separator(RichText::new("Filter").heading());
             ui.end_row();
 
             // ui.label("Interpolation");
@@ -127,11 +118,11 @@ impl Settings {
             });
             ui.end_row();
 
+            // Sort
             ui.separator();
-            ui.separator();
+            ui.labeled_separator(RichText::new("Sort").heading());
             ui.end_row();
 
-            // Sort
             ui.label("Sort");
             ComboBox::from_id_salt(ui.next_auto_id())
                 .selected_text(format!("{:?}", self.sort))

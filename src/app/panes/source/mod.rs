@@ -9,8 +9,8 @@ use crate::app::{
     data::{save, Format},
     localize,
 };
-use egui::{RichText, Ui, Window};
-use egui_phosphor::regular::{ARROWS_HORIZONTAL, CHART_BAR, FLOPPY_DISK, GEAR, TABLE};
+use egui::{Id, RichText, Ui, Window};
+use egui_phosphor::regular::{ARROWS_HORIZONTAL, CHART_BAR, EXCLUDE, FLOPPY_DISK, GEAR, TABLE};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -54,6 +54,9 @@ impl Pane {
                 }
             }
         };
+        if ui.button(RichText::new(EXCLUDE).heading()).clicked() {
+            ui.data_mut(|data| data.insert_temp(Id::new("Distance"), self.target.clone()))
+        }
         ui.separator();
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             if ui.button("Parquet").clicked() {
