@@ -264,9 +264,7 @@ fn fcl() -> Expr {
     ternary_expr(
         col("FA").fa().saturated(),
         lit(0),
-        (col("TimeMean") - saturated(col("TimeMean")).forward_fill(None))
-            / (saturated(col("TimeMean")).backward_fill(None)
-                - saturated(col("TimeMean")).forward_fill(None)),
+        (col("TimeMean") - saturated(col("TimeMean")).forward_fill(None)) / delta(col("TimeMean")),
     )
 }
 
@@ -275,11 +273,7 @@ fn angle() -> Expr {
 }
 
 fn tangent() -> Expr {
-    ternary_expr(
-        col("FA").fa().saturated(),
-        lit(NAN),
-        delta(col("ECL")) / delta(col("TimeMean")),
-    )
+    delta(col("ECL")) / delta(col("TimeMean"))
 }
 
 fn delta(expr: Expr) -> Expr {
