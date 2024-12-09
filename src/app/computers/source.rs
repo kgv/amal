@@ -22,15 +22,14 @@ pub(crate) struct Computer;
 impl Computer {
     fn try_compute(&mut self, key: Key<'_>) -> PolarsResult<LazyFrame> {
         let mut lazy_frame = key.data_frame.clone().lazy();
-        // Meta
-        lazy_frame = lazy_frame.with_columns([
-            col("Time").list().mean().alias("TimeMean"),
-            col("Time")
-                .list()
-                .std(key.settings.ddof)
-                .alias("TimeStandardDeviation"),
-        ]);
         lazy_frame = lazy_frame
+            .with_columns([
+                col("Time").list().mean().alias("TimeMean"),
+                col("Time")
+                    .list()
+                    .std(key.settings.ddof)
+                    .alias("TimeStandardDeviation"),
+            ])
             .with_columns([
                 // Relative time
                 relative_time(key.settings)
@@ -233,27 +232,28 @@ impl LazyFrameExt for LazyFrame {
 }
 
 fn relative_time(settings: &Settings) -> Expr {
-    let mut expr = col("TimeMean");
-    if let Some(relative) = &settings.relative {
-        expr = expr
-            / col("TimeMean")
-                .filter(
-                    col("FA")
-                        .fa()
-                        .c()
-                        .eq(lit(relative.carbons))
-                        .and(col("FA").fa().indices().eq(lit(Scalar::new(
-                            DataType::List(Box::new(DataType::UInt8)),
-                            AnyValue::List(Series::from_iter(relative.indices.iter())),
-                        ))))
-                        .and(col("FA").fa().bounds().eq(lit(Scalar::new(
-                            DataType::List(Box::new(DataType::Int8)),
-                            AnyValue::List(Series::from_iter(relative.bounds.iter())),
-                        )))),
-                )
-                .first()
+    match &settings.relative {
+        Some(relative) => {
+            col("TimeMean")
+                / col("TimeMean")
+                    .filter(
+                        col("FA")
+                            .fa()
+                            .c()
+                            .eq(lit(relative.carbons))
+                            .and(col("FA").fa().indices().eq(lit(Scalar::new(
+                                DataType::List(Box::new(DataType::UInt8)),
+                                AnyValue::List(Series::from_iter(relative.indices.iter())),
+                            ))))
+                            .and(col("FA").fa().bounds().eq(lit(Scalar::new(
+                                DataType::List(Box::new(DataType::Int8)),
+                                AnyValue::List(Series::from_iter(relative.bounds.iter())),
+                            )))),
+                    )
+                    .first()
+        }
+        None => lit(NAN),
     }
-    expr
 }
 
 fn ecl() -> Expr {
