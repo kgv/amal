@@ -1,6 +1,6 @@
 use crate::{
     app::{localize, text::Text, MAX_PRECISION},
-    special::columns::{
+    special::column::{
         fatty_acids::{ColumnExt as _, FattyAcid},
         mode::ColumnExt as _,
     },

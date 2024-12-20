@@ -1,2 +1,2 @@
-pub mod columns;
+pub mod column;
 pub mod expressions;

@@ -1,5 +1,5 @@
 use self::panes::{behavior::Behavior, Pane};
-use crate::utils::TreeExt;
+use crate::presets::AGILENT;
 use anyhow::Result;
 use data::Data;
 use eframe::{get_value, set_value, APP_KEY};
@@ -18,6 +18,7 @@ use egui_phosphor::{
     Variant,
 };
 use egui_tiles::{ContainerKind, Tile, Tiles, Tree};
+use egui_tiles_ext::{TreeExt as _, VERTICAL};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Write, str, time::Duration};
@@ -32,7 +33,6 @@ const MAX_PRECISION: usize = 16;
 const MAX_TEMPERATURE: f64 = 250.0;
 const _NOTIFICATIONS_DURATION: Duration = Duration::from_secs(15);
 const SIZE: f32 = 32.0;
-const AGILENT: &[u8] = include_bytes!("../../assets/1/agilent.bin");
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
@@ -155,8 +155,10 @@ impl App {
                 .collect()
                 .unwrap();
             println!("data_frame: {data_frame}");
-            self.tree.insert_pane(Pane::source(data_frame.clone()));
-            self.tree.insert_pane(Pane::distance(data_frame.clone()));
+            self.tree
+                .insert_pane::<VERTICAL>(Pane::source(data_frame.clone()));
+            self.tree
+                .insert_pane::<VERTICAL>(Pane::distance(data_frame.clone()));
             data::save("data_frame.bin", data::Format::Bin, data_frame).unwrap();
         }
     }
@@ -232,17 +234,6 @@ impl App {
                         ui.memory_mut(|memory| *memory = Default::default());
                     }
                     ui.separator();
-                    ui.menu_button(RichText::new(DATABASE).size(SIZE), |ui| {
-                        if ui
-                            .button(RichText::new(format!("{DATABASE} IPPRAS/Agilent")).heading())
-                            .clicked()
-                        {
-                            let data_frame = bincode::deserialize(AGILENT).unwrap();
-                            self.tree.insert_pane(Pane::source(data_frame));
-                            ui.close_menu();
-                        }
-                    });
-                    ui.separator();
                     if ui
                         .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(SIZE))
                         .on_hover_text(localize!("vertical"))
@@ -288,6 +279,70 @@ impl App {
                         }
                     }
                     ui.separator();
+                    ui.menu_button(RichText::new(DATABASE).size(SIZE), |ui| {
+                        if ui
+                            .button(RichText::new(format!("{DATABASE} IPPRAS/Agilent")).heading())
+                            .clicked()
+                        {
+                            let data_frame: DataFrame = bincode::deserialize(AGILENT).unwrap();
+                            println!("data_frame0: {data_frame}");
+                            let mut lazy_frame = data_frame.lazy();
+                            // col("FA").struct_().field_by_name("Carbons"),
+                            lazy_frame = lazy_frame
+                                .with_row_index("IDX", None)
+                                .unnest([col("FA")])
+                                .explode([col("Indices"), col("Bounds")])
+                                .with_columns([
+                                    col("Indices").alias("Index"),
+                                    col("Bounds").sign().alias("Isomerism"),
+                                    col("Bounds")
+                                        .abs()
+                                        .cast(DataType::UInt8)
+                                        .alias("Unsaturation"),
+                                ]);
+                            println!("lazy_frame1: {}", lazy_frame.clone().collect().unwrap());
+                            lazy_frame = lazy_frame
+                                .group_by(["IDX"])
+                                .agg([
+                                    col("Mode").first(),
+                                    col("Carbons").first(),
+                                    as_struct(vec![
+                                        col("Index"),
+                                        col("Isomerism"),
+                                        col("Unsaturation"),
+                                    ])
+                                    .alias("Unsaturated"),
+                                    col("Label").first(),
+                                    col("Time").first(),
+                                ])
+                                .with_columns([col("Unsaturated").list().eval(
+                                    when(col("").eq(as_struct(vec![
+                                        lit(NULL).alias("Index"),
+                                        lit(NULL).alias("Isomerism"),
+                                        lit(NULL).alias("Unsaturation"),
+                                    ])))
+                                    .then(lit(NULL))
+                                    .otherwise(col("")),
+                                    true,
+                                )]);
+                            println!("lazy_frame2: {}", lazy_frame.clone().collect().unwrap());
+                            lazy_frame = lazy_frame.select([
+                                col("IDX").alias("Index"),
+                                col("Mode"),
+                                as_struct(vec![col("Carbons"), col("Unsaturated")])
+                                    .alias("FattyAcid"),
+                                col("Label"),
+                                col("Time"),
+                            ]);
+                            println!("lazy_frame3: {}", lazy_frame.clone().collect().unwrap());
+                            let data_frame = lazy_frame.clone().collect().unwrap();
+                            data::save("df.ron", data::Format::Ron, data_frame).unwrap();
+                            std::process::exit(0);
+                            self.tree.insert_pane::<VERTICAL>(Pane::source(data_frame));
+                            ui.close_menu();
+                        }
+                    });
+                    ui.separator();
                 });
             });
         });
@@ -297,7 +352,8 @@ impl App {
 impl App {
     fn distance(&mut self, ctx: &egui::Context) {
         if let Some(data_frame) = ctx.data_mut(|data| data.remove_temp(Id::new("Distance"))) {
-            self.tree.insert_pane(Pane::distance(data_frame));
+            self.tree
+                .insert_pane::<VERTICAL>(Pane::distance(data_frame));
         }
     }
 }

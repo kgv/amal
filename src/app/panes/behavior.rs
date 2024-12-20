@@ -1,8 +1,8 @@
 use super::Pane;
-use crate::utils::ContainerExt;
 use egui::{CursorIcon, Frame, Margin, RichText, Sides, Ui, WidgetText};
 use egui_phosphor::regular::X;
 use egui_tiles::{Tile, TileId, Tiles, UiResponse};
+use egui_tiles_ext::ContainerExt as _;
 use serde::{Deserialize, Serialize};
 
 /// Behavior

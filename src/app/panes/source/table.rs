@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use super::Settings;
 use crate::{
-    app::panes::widgets::float::FloatValue, special::columns::fatty_acids::ColumnExt as _,
+    app::panes::widgets::float::FloatValue, special::column::fatty_acids::ColumnExt as _,
 };
 use egui::{vec2, Frame, Grid, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
