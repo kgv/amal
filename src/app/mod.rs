@@ -301,31 +301,55 @@ impl App {
                                         .alias("Unsaturation"),
                                 ]);
                             println!("lazy_frame1: {}", lazy_frame.clone().collect().unwrap());
-                            lazy_frame = lazy_frame
-                                .group_by(["IDX"])
-                                .agg([
-                                    col("Mode").first(),
-                                    col("Carbons").first(),
-                                    as_struct(vec![
-                                        col("Index"),
-                                        col("Isomerism"),
-                                        col("Unsaturation"),
-                                    ])
-                                    .alias("Unsaturated"),
-                                    col("Label").first(),
-                                    col("Time").first(),
+                            lazy_frame = lazy_frame.group_by(["IDX"]).agg([
+                                col("Mode").first(),
+                                col("Carbons").first(),
+                                as_struct(vec![
+                                    col("Index"),
+                                    col("Isomerism"),
+                                    col("Unsaturation"),
                                 ])
-                                .with_columns([col("Unsaturated").list().eval(
-                                    when(col("").eq(as_struct(vec![
+                                .alias("Unsaturated"),
+                                col("Label").first(),
+                                col("Time").first(),
+                            ]);
+                            println!("lazy_frame2: {}", lazy_frame.clone().collect().unwrap());
+                            lazy_frame = lazy_frame.cache().with_columns([
+                                when(
+                                    col("Unsaturated").eq(concat_list([as_struct(vec![
                                         lit(NULL).alias("Index"),
                                         lit(NULL).alias("Isomerism"),
                                         lit(NULL).alias("Unsaturation"),
-                                    ])))
-                                    .then(lit(NULL))
-                                    .otherwise(col("")),
-                                    true,
-                                )]);
-                            println!("lazy_frame2: {}", lazy_frame.clone().collect().unwrap());
+                                    ])])
+                                    .unwrap()),
+                                )
+                                .then(lit(Scalar::new(
+                                    DataType::List(Box::new(DataType::Null)),
+                                    AnyValue::List(Series::new_empty(
+                                        PlSmallStr::EMPTY,
+                                        &DataType::Null,
+                                    )),
+                                )))
+                                // .then(lit(NULL))
+                                .otherwise(col("Unsaturated"))
+                                .alias("Unsaturated"),
+                                // true,
+                            ]);
+                            // .with_columns([col("Unsaturated").list().eval(
+                            //     when(col("").eq(as_struct(vec![
+                            //         lit(NULL).alias("Index"),
+                            //         lit(NULL).alias("Isomerism"),
+                            //         lit(NULL).alias("Unsaturation"),
+                            //     ])))
+                            //     .then(lit(Scalar::new(
+                            //         DataType::List(Box::new(DataType::Null)),
+                            //         AnyValue::List(Series::new_empty(PlSmallStr::EMPTY, &DataType::Null)),
+                            //     )))
+                            //     // .then(lit(NULL))
+                            //     .otherwise(col("")),
+                            //     true,
+                            // )]);
+                            println!("lazy_frame3: {}", lazy_frame.clone().collect().unwrap());
                             lazy_frame = lazy_frame.select([
                                 col("IDX").alias("Index"),
                                 col("Mode"),
@@ -334,7 +358,7 @@ impl App {
                                 col("Label"),
                                 col("Time"),
                             ]);
-                            println!("lazy_frame3: {}", lazy_frame.clone().collect().unwrap());
+                            println!("lazy_frame4: {}", lazy_frame.clone().collect().unwrap());
                             let data_frame = lazy_frame.clone().collect().unwrap();
                             data::save("df.ron", data::Format::Ron, data_frame).unwrap();
                             std::process::exit(0);
