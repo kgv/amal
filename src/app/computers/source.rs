@@ -28,20 +28,28 @@ impl Computer {
         let mut lazy_frame = key.data_frame.clone().lazy();
         lazy_frame = lazy_frame
             .with_columns([
+                // Retention time mean
                 col("RetentionTime")
                     .list()
                     .mean()
                     .alias("RetentionTimeMean"),
+                // Retention time standard deviation
                 col("RetentionTime")
                     .list()
                     .std(key.settings.ddof)
                     .alias("RetentionTimeStandardDeviation"),
             ])
             .with_columns([
-                // Relative time
+                // Relative retention time
                 relative_time(key.settings)
                     .over(["Mode"])
                     .alias("RelativeRetentionTime"),
+                // Delta retention time
+                col("FattyAcid")
+                    .fatty_acid()
+                    .delta(col("RetentionTimeMean"))
+                    .over(["Mode"])
+                    .alias("DeltaRetentionTime"),
                 // Temperature
                 (col("Mode").struct_().field_by_name("OnsetTemperature")
                     + col("RetentionTimeMean")
@@ -68,23 +76,8 @@ impl Computer {
                     .alias("ECL"),
                 // ECN
                 col("FattyAcid").fatty_acid().ecn().alias("ECN"),
-            ]);
-        println!(
-            "lazy_frame TEMP0: {}",
-            lazy_frame
-                .clone()
-                .unnest([col("FattyAcid")])
-                .collect()
-                .unwrap()
-        );
-        lazy_frame = lazy_frame
+            ])
             .with_columns([
-                // Delta retention time
-                col("FattyAcid")
-                    .fatty_acid()
-                    .delta(col("RetentionTimeMean"))
-                    .over(["Mode"])
-                    .alias("DeltaRetentionTime"),
                 // Slope
                 col("FattyAcid")
                     .fatty_acid()
@@ -131,17 +124,13 @@ impl Computer {
                         .alias("RCOOCH3"),
                 ])
                 .alias("Mass"),
-                // Meta
+                // Derivative
                 as_struct(vec![
                     col("Slope"),
                     col("Slope").arctan().degrees().alias("Angle"),
                 ])
-                .alias("Meta"),
+                .alias("Derivative"),
             ]);
-        println!(
-            "lazy_frame TEMP1: {}",
-            lazy_frame.clone().collect().unwrap()
-        );
         // Filter
         if let Some(onset_temperature) = key.settings.filter.mode.onset_temperature {
             lazy_frame = lazy_frame.filter(
@@ -162,15 +151,6 @@ impl Computer {
         if !key.settings.filter.fatty_acids.is_empty() {
             let mut expr = lit(false);
             for fatty_acid in &key.settings.filter.fatty_acids {
-                // expr = expr.and(col("FattyAcid").fa().c().eq(lit(fatty_acid.carbons)).not());
-                // let indices = Scalar::new(
-                //     DataType::List(Box::new(DataType::UInt8)),
-                //     AnyValue::List(Series::from_iter(&fatty_acid.indices)),
-                // );
-                // let bounds = Scalar::new(
-                //     DataType::List(Box::new(DataType::Int8)),
-                //     AnyValue::List(Series::from_iter(&fatty_acid.bounds)),
-                // );
                 expr = expr.or(col("FattyAcid").fatty_acid().equal(fatty_acid));
             }
             lazy_frame = lazy_frame.filter(expr);
@@ -208,7 +188,8 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
                         .field_by_name("ECL")
                         .alias("ECL"),
                 ]);
-                lazy_frame
+                println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
+                let lazy_frame = lazy_frame
                     .group_by([match key.settings.group {
                         Group::FattyAcid => col("FattyAcid"),
                         Group::OnsetTemperature => {
@@ -218,7 +199,9 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
                             col("Mode").struct_().field_by_name("TemperatureStep")
                         }
                     }])
-                    .agg([col("RetentionTime"), col("ECL")])
+                    .agg([col("RetentionTime"), col("ECL")]);
+                println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
+                lazy_frame
             }
             Kind::Table => lazy_frame,
         };
@@ -257,17 +240,7 @@ trait LazyFrameExt {
 
 impl LazyFrameExt for LazyFrame {
     fn sort_by_fatty_acids(self, sort_options: SortMultipleOptions) -> LazyFrame {
-        self.sort_by_exprs(
-            [
-                col("Mode"),
-                col("FattyAcid"),
-                // col("FattyAcid").fatty_acid().carbons(),
-                // col("FattyAcid").fatty_acid().unsaturated().sum(),
-                // col("FattyAcid").fatty_acid().indices(),
-                // col("FattyAcid").fatty_acid().bounds(),
-            ],
-            sort_options,
-        )
+        self.sort_by_exprs([col("Mode"), col("FattyAcid")], sort_options)
     }
 
     fn sort_by_time(self, sort_options: SortMultipleOptions) -> LazyFrame {
@@ -333,10 +306,6 @@ impl Saturated for FattyAcidExpr {
         self.clone().backward(expr.clone()) - self.clone().forward(expr)
     }
 
-    // col("ECL") / col("RetentionTimeMean")
-    // fn angle(self) -> Expr {
-    //     self.slope().arctan().degrees()
-    // }
     fn slope(self, dividend: Expr, divisor: Expr) -> Expr {
         self.clone().delta(dividend) / self.clone().delta(divisor)
     }

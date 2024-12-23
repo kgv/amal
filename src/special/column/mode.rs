@@ -47,12 +47,12 @@ impl ModeSeries {
         0.0..=0.0
     }
 
-    pub fn onset_temperature(&self) -> OnsetTemperature {
-        OnsetTemperature::new(&self.onset_temperature).unwrap()
+    pub fn onset_temperature(&self) -> PolarsResult<OnsetTemperature> {
+        OnsetTemperature::new(&self.onset_temperature)
     }
 
-    pub fn temperature_step(&self) -> TemperatureStep {
-        TemperatureStep::new(&self.temperature_step).unwrap()
+    pub fn temperature_step(&self) -> PolarsResult<TemperatureStep> {
+        TemperatureStep::new(&self.temperature_step)
     }
 }
 

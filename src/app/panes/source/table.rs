@@ -16,10 +16,17 @@ const RETENTION_TIME: Range<usize> = ID.end..ID.end + 3;
 const TEMPERATURE: Range<usize> = RETENTION_TIME.end..RETENTION_TIME.end + 1;
 const CHAIN_LENGTH: Range<usize> = TEMPERATURE.end..TEMPERATURE.end + 3;
 const MASS: Range<usize> = CHAIN_LENGTH.end..CHAIN_LENGTH.end + 1;
-const META: Range<usize> = MASS.end..MASS.end + 2;
-const LEN: usize = META.end;
+const DERIVATIVE: Range<usize> = MASS.end..MASS.end + 2;
+const LEN: usize = DERIVATIVE.end;
 
-const TOP: &[Range<usize>] = &[ID, RETENTION_TIME, TEMPERATURE, CHAIN_LENGTH, MASS, META];
+const TOP: &[Range<usize>] = &[
+    ID,
+    RETENTION_TIME,
+    TEMPERATURE,
+    CHAIN_LENGTH,
+    MASS,
+    DERIVATIVE,
+];
 
 /// Table view
 #[derive(Clone, Debug)]
@@ -84,8 +91,8 @@ impl TableView<'_> {
             (0, MASS) => {
                 ui.heading("Mass");
             }
-            (0, META) => {
-                ui.heading("Meta");
+            (0, DERIVATIVE) => {
+                ui.heading("Derivative");
             }
             // Bottom
             (1, id::INDEX) => {
@@ -115,10 +122,10 @@ impl TableView<'_> {
             (1, chain_length::ECN) => {
                 ui.heading("ECN");
             }
-            (1, meta::SLOPE) => {
+            (1, derivative::SLOPE) => {
                 ui.heading("Slope");
             }
-            (1, meta::ANGLE) => {
+            (1, derivative::ANGLE) => {
                 ui.heading("Angle");
             }
             _ => {}
@@ -128,8 +135,8 @@ impl TableView<'_> {
     fn body_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
         match (row, column) {
             (row, id::INDEX) => {
-                let indices = self.data_frame["Index"].u32().unwrap();
-                let value = indices.get(row).unwrap();
+                let index = self.data_frame["Index"].u32().unwrap();
+                let value = index.get(row).unwrap();
                 ui.label(value.to_string());
             }
             (row, id::MODE) => {
@@ -208,8 +215,8 @@ impl TableView<'_> {
                 );
             }
             (row, chain_length::ECL) => {
-                let equivalent = self.data_frame["ChainLength"].struct_().unwrap();
-                let ecl = equivalent.field_by_name("ECL").unwrap();
+                let chain_length = self.data_frame["ChainLength"].struct_().unwrap();
+                let ecl = chain_length.field_by_name("ECL").unwrap();
                 ui.add(
                     FloatValue::new(ecl.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
@@ -217,8 +224,8 @@ impl TableView<'_> {
                 );
             }
             (row, chain_length::FCL) => {
-                let equivalent = self.data_frame["ChainLength"].struct_().unwrap();
-                let fcl = equivalent.field_by_name("FCL").unwrap();
+                let chain_length = self.data_frame["ChainLength"].struct_().unwrap();
+                let fcl = chain_length.field_by_name("FCL").unwrap();
                 ui.add(
                     FloatValue::new(fcl.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
@@ -226,8 +233,8 @@ impl TableView<'_> {
                 );
             }
             (row, chain_length::ECN) => {
-                let equivalent = self.data_frame["ChainLength"].struct_().unwrap();
-                let ecn = equivalent.field_by_name("ECN").unwrap();
+                let chain_length = self.data_frame["ChainLength"].struct_().unwrap();
+                let ecn = chain_length.field_by_name("ECN").unwrap();
                 ui.label(ecn.str_value(row).unwrap());
             }
             (row, MASS) => {
@@ -259,18 +266,18 @@ impl TableView<'_> {
                     });
                 });
             }
-            (row, meta::SLOPE) => {
-                let equivalent = self.data_frame["Meta"].struct_().unwrap();
-                let slope = equivalent.field_by_name("Slope").unwrap();
+            (row, derivative::SLOPE) => {
+                let derivative = self.data_frame["Derivative"].struct_().unwrap();
+                let slope = derivative.field_by_name("Slope").unwrap();
                 ui.add(
                     FloatValue::new(slope.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
                 );
             }
-            (row, meta::ANGLE) => {
-                let equivalent = self.data_frame["Meta"].struct_().unwrap();
-                let angle = equivalent.field_by_name("Angle").unwrap();
+            (row, derivative::ANGLE) => {
+                let derivative = self.data_frame["Derivative"].struct_().unwrap();
+                let angle = derivative.field_by_name("Angle").unwrap();
                 ui.add(
                     FloatValue::new(angle.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
@@ -329,9 +336,9 @@ mod chain_length {
     pub(super) const ECN: Range<usize> = FCL.end..FCL.end + 1;
 }
 
-mod meta {
+mod derivative {
     use super::*;
 
-    pub(super) const SLOPE: Range<usize> = META.start..META.start + 1;
+    pub(super) const SLOPE: Range<usize> = DERIVATIVE.start..DERIVATIVE.start + 1;
     pub(super) const ANGLE: Range<usize> = SLOPE.end..SLOPE.end + 1;
 }

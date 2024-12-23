@@ -2106,8 +2106,8 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 
 [[package]]
 name = "lipid"
-version = "0.0.13"
-source = "git+https://github.com/ippras/lipid#545bf468465e90a421d486db9eaba4eb688bdf1a"
+version = "0.0.14"
+source = "git+https://github.com/ippras/lipid#d1f0e8b896dd9e911fc6594503287c238c050da0"
 dependencies = [
  "atom",
  "paste",
