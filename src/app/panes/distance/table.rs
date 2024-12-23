@@ -100,26 +100,26 @@ impl TableView<'_> {
             (row, FROM) => {
                 let fatty_acids = self.data_frame["From"].fatty_acid();
                 let fatty_acid = fatty_acids.get(row)?.unwrap();
-                ui.label(fatty_acid.display(COMMON).to_string());
+                ui.label(format!("{:#}", fatty_acid.display(COMMON)));
                 // .on_hover_text(fatty_acid.label());
             }
             (row, TO) => {
                 let fatty_acids = self.data_frame["To"].fatty_acid();
                 let fatty_acid = fatty_acids.get(row)?.unwrap();
-                ui.label(fatty_acid.display(COMMON).to_string());
+                ui.label(format!("{:#}", fatty_acid.display(COMMON)));
                 // .on_hover_text(fatty_acid.label());
             }
             (row, TIME) => {
-                let time = self.data_frame["Time"].struct_().unwrap();
-                let delta = time.field_by_name("Delta").unwrap();
+                let retention_time = self.data_frame["RetentionTime"].struct_().unwrap();
+                let delta = retention_time.field_by_name("Delta").unwrap();
                 ui.add(
                     FloatValue::new(delta.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
                 )
                 .on_hover_ui(|ui| {
-                    let from = time.field_by_name("From").unwrap();
-                    let to = time.field_by_name("To").unwrap();
+                    let from = retention_time.field_by_name("From").unwrap();
+                    let to = retention_time.field_by_name("To").unwrap();
                     ui.horizontal(|ui| {
                         ui.label(to.str_value(row).unwrap());
                         ui.label("-");

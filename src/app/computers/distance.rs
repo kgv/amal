@@ -18,7 +18,7 @@ impl Computer {
             .clone()
             .select([
                 as_struct(vec![col("FattyAcid"), col("Mode")]).alias("From"),
-                col("Time")
+                col("RetentionTime")
                     .struct_()
                     .field_by_name("Absolute")
                     .struct_()
@@ -35,7 +35,7 @@ impl Computer {
                 lazy_frame
                     .select([
                         as_struct(vec![col("FattyAcid"), col("Mode")]).alias("To"),
-                        col("Time")
+                        col("RetentionTime")
                             .struct_()
                             .field_by_name("Absolute")
                             .struct_()
@@ -91,7 +91,7 @@ impl Computer {
                     .over([col("From").struct_().field_by_name("Mode")])
                     .alias("Delta"),
             ])
-            .alias("Time"),
+            .alias("RetentionTime"),
             as_struct(vec![
                 col("FromECL").alias("From"),
                 col("ToECL").alias("To"),
@@ -117,7 +117,7 @@ impl Computer {
                 sort_options,
             ),
             Sort::Time => lazy_frame.sort_by_exprs(
-                [col("Time")
+                [col("RetentionTime")
                     .struct_()
                     .field_by_name("Delta")
                     .abs()

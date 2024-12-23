@@ -101,13 +101,3 @@ impl TemperatureStep<'_> {
         self.0.unique().unwrap()
     }
 }
-
-// data_frame["Mode"]
-//     .struct_()
-//     .unwrap()
-//     .field_by_name("TemperatureStep")
-//     .unwrap()
-//     .f64()
-//     .unwrap()
-//     .unique()
-//     .unwrap();

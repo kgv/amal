@@ -30,7 +30,7 @@ impl PlotView<'_> {
     fn try_ui(&mut self, ui: &mut Ui) -> PolarsResult<()> {
         // let mode = &self.data_frame["Mode"];
         let index = self.data_frame["Index"].u32()?;
-        let time = self.data_frame["Time"].list()?;
+        let time = self.data_frame["RetentionTime"].list()?;
         let ecl = self.data_frame["ECL"].list()?;
         // let time = time.f64()?;
         // let ecl = ecl.f64()?;

@@ -5,7 +5,7 @@ use crate::app::{
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::fatty_acid::{
     polars::{
-        expr::{chain_length::Options, mass::Mass as _},
+        expr::{chain_length::Options, mass::Mass as _, FattyAcidExpr},
         ChainLength as _, ExprExt,
     },
     Kind as FattyAcidKind,
@@ -28,27 +28,31 @@ impl Computer {
         let mut lazy_frame = key.data_frame.clone().lazy();
         lazy_frame = lazy_frame
             .with_columns([
-                col("Time").list().mean().alias("TimeMean"),
-                col("Time")
+                col("RetentionTime")
+                    .list()
+                    .mean()
+                    .alias("RetentionTimeMean"),
+                col("RetentionTime")
                     .list()
                     .std(key.settings.ddof)
-                    .alias("TimeStandardDeviation"),
+                    .alias("RetentionTimeStandardDeviation"),
             ])
             .with_columns([
                 // Relative time
                 relative_time(key.settings)
                     .over(["Mode"])
-                    .alias("RelativeTime"),
+                    .alias("RelativeRetentionTime"),
                 // Temperature
                 (col("Mode").struct_().field_by_name("OnsetTemperature")
-                    + col("TimeMean") * col("Mode").struct_().field_by_name("TemperatureStep"))
+                    + col("RetentionTimeMean")
+                        * col("Mode").struct_().field_by_name("TemperatureStep"))
                 .clip_max(lit(MAX_TEMPERATURE))
                 .alias("Temperature"),
                 // FCL
                 col("FattyAcid")
                     .fatty_acid()
                     .fcl(
-                        col("TimeMean"),
+                        col("RetentionTimeMean"),
                         Options::new().logarithmic(key.settings.logarithmic),
                     )
                     .over(["Mode"])
@@ -57,7 +61,7 @@ impl Computer {
                 col("FattyAcid")
                     .fatty_acid()
                     .ecl(
-                        col("TimeMean"),
+                        col("RetentionTimeMean"),
                         Options::new().logarithmic(key.settings.logarithmic),
                     )
                     .over(["Mode"])
@@ -75,27 +79,34 @@ impl Computer {
         );
         lazy_frame = lazy_frame
             .with_columns([
-                // Delta
-                delta(col("TimeMean")).over(["Mode"]).alias("Delta"),
-                // Tangent
-                tangent().over(["Mode"]).alias("Tangent"),
-                // Angle
-                angle().over(["Mode"]).alias("Angle"),
+                // Delta retention time
+                col("FattyAcid")
+                    .fatty_acid()
+                    .delta(col("RetentionTimeMean"))
+                    .over(["Mode"])
+                    .alias("DeltaRetentionTime"),
+                // Slope
+                col("FattyAcid")
+                    .fatty_acid()
+                    .slope(col("ECL"), col("RetentionTimeMean"))
+                    .over(["Mode"])
+                    .alias("Slope"),
             ])
             .select([
                 col("Mode"),
                 col("FattyAcid"),
-                // Time
+                // Retention time
                 as_struct(vec![
                     as_struct(vec![
-                        col("TimeMean").alias("Mean"),
-                        col("TimeStandardDeviation").alias("StandardDeviation"),
-                        col("Time").alias("Values"),
+                        col("RetentionTimeMean").alias("Mean"),
+                        col("RetentionTimeStandardDeviation").alias("StandardDeviation"),
+                        col("RetentionTime").alias("Values"),
                     ])
                     .alias("Absolute"),
-                    col("RelativeTime").alias("Relative"),
+                    col("RelativeRetentionTime").alias("Relative"),
+                    col("DeltaRetentionTime").alias("Delta"),
                 ])
-                .alias("Time"),
+                .alias("RetentionTime"),
                 // Temperature
                 col("Temperature"),
                 // Chain length
@@ -121,7 +132,11 @@ impl Computer {
                 ])
                 .alias("Mass"),
                 // Meta
-                as_struct(vec![col("Delta"), col("Tangent"), col("Angle")]).alias("Meta"),
+                as_struct(vec![
+                    col("Slope"),
+                    col("Slope").arctan().degrees().alias("Angle"),
+                ])
+                .alias("Meta"),
             ]);
         println!(
             "lazy_frame TEMP1: {}",
@@ -182,12 +197,12 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
                 lazy_frame = lazy_frame.select([
                     col("Mode"),
                     col("FattyAcid"),
-                    col("Time")
+                    col("RetentionTime")
                         .struct_()
                         .field_by_name("Absolute")
                         .struct_()
                         .field_by_name("Mean")
-                        .alias("Time"),
+                        .alias("RetentionTime"),
                     col("ChainLength")
                         .struct_()
                         .field_by_name("ECL")
@@ -203,7 +218,7 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
                             col("Mode").struct_().field_by_name("TemperatureStep")
                         }
                     }])
-                    .agg([col("Time"), col("ECL")])
+                    .agg([col("RetentionTime"), col("ECL")])
             }
             Kind::Table => lazy_frame,
         };
@@ -224,6 +239,7 @@ impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.settings.kind.hash(state);
         self.settings.ddof.hash(state);
+        self.settings.logarithmic.hash(state);
         self.settings.relative.hash(state);
         self.settings.filter.hash(state);
         self.settings.sort.hash(state);
@@ -259,7 +275,7 @@ impl LazyFrameExt for LazyFrame {
             .sort_by(
                 &[
                     col("ChainLength").struct_().field_by_name("ECL"),
-                    col("Time")
+                    col("RetentionTime")
                         .struct_()
                         .field_by_name("Absolute")
                         .struct_()
@@ -274,8 +290,8 @@ impl LazyFrameExt for LazyFrame {
 fn relative_time(settings: &Settings) -> Expr {
     match &settings.relative {
         Some(relative) => {
-            col("TimeMean")
-                / col("TimeMean")
+            col("RetentionTimeMean")
+                / col("RetentionTimeMean")
                     .filter(
                         // col("FattyAcid")
                         //     .fatty_acid()
@@ -299,52 +315,37 @@ fn relative_time(settings: &Settings) -> Expr {
 
 /// Saturated
 pub trait Saturated {
-    /// Angle
-    fn angle(self) -> Expr;
+    /// Delta
+    fn delta(self, expr: Expr) -> Expr;
 
-    /// Tangent
-    fn tangent(self) -> Expr;
+    /// Slope
+    fn slope(self, dividend: Expr, divisor: Expr) -> Expr;
 
     /// Backward saturated
-    fn backward(self) -> Expr;
+    fn backward(self, expr: Expr) -> Expr;
 
     /// Forward saturated
-    fn forward(self) -> Expr;
+    fn forward(self, expr: Expr) -> Expr;
 }
 
-fn angle() -> Expr {
-    tangent().arctan().degrees()
-}
+impl Saturated for FattyAcidExpr {
+    fn delta(self, expr: Expr) -> Expr {
+        self.clone().backward(expr.clone()) - self.clone().forward(expr)
+    }
 
-fn tangent() -> Expr {
-    let saturated_ecl = || col("FattyAcid").fatty_acid().saturated_or_null(col("ECL"));
-    let saturated_time = || {
-        col("FattyAcid")
-            .fatty_acid()
-            .saturated_or_null(col("TimeMean"))
-    };
-    (saturated_ecl().backward_fill(None) - saturated_ecl().forward_fill(None))
-        / (saturated_time().backward_fill(None) - saturated_time().forward_fill(None))
-}
+    // col("ECL") / col("RetentionTimeMean")
+    // fn angle(self) -> Expr {
+    //     self.slope().arctan().degrees()
+    // }
+    fn slope(self, dividend: Expr, divisor: Expr) -> Expr {
+        self.clone().delta(dividend) / self.clone().delta(divisor)
+    }
 
-fn delta(expr: Expr) -> Expr {
-    saturated(expr.clone()).backward_fill(None) - saturated(expr).forward_fill(None)
-}
+    fn backward(self, expr: Expr) -> Expr {
+        self.clone().saturated_or_null(expr).backward_fill(None)
+    }
 
-fn saturated(expr: Expr) -> Expr {
-    ternary_expr(
-        col("FattyAcid").fatty_acid().is_saturated(),
-        expr,
-        lit(NULL),
-    )
+    fn forward(self, expr: Expr) -> Expr {
+        self.clone().saturated_or_null(expr).forward_fill(None)
+    }
 }
-
-// fn slope() -> Expr {
-//     ternary_expr(
-//         col("FattyAcid").fa().saturated(),
-//         lit(0),
-//         ternary_expr(col("FattyAcid").fa().saturated(), col("FattyAcid").fa().c(), lit(NULL)).forward_fill(None)
-//             + (col("Time").struct_().field_by_name("Mean") - time().forward_fill(None))
-//                 / (time().backward_fill(None) - time().forward_fill(None)),
-//     )
-// }

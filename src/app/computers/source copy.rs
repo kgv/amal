@@ -66,8 +66,8 @@ impl Computer {
             .with_columns([
                 // Delta
                 delta(col("TimeMean")).over(["Mode"]).alias("Delta"),
-                // Tangent
-                tangent().over(["Mode"]).alias("Tangent"),
+                // Slope
+                tangent().over(["Mode"]).alias("Slope"),
                 // Angle
                 angle().over(["Mode"]).alias("Angle"),
             ])

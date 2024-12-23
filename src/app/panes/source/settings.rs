@@ -88,13 +88,13 @@ impl Settings {
                     .selected_text(selected_text)
                     .show_ui(ui, |ui| {
                         let current_value = &mut self.relative;
-                        let fatty_acids = data_frame.fatty_acid();
-                        // for selected_value in
-                        //     fatty_acids.saturated().unwrap().iter().unwrap().unique()
-                        // {
-                        //     let text = selected_value.to_string();
-                        //     ui.selectable_value(current_value, Some(selected_value), text);
-                        // }
+                        let fatty_acid = data_frame.fatty_acid().saturated().unwrap();
+                        for index in 0..fatty_acid.len() {
+                            if let Some(selected_value) = fatty_acid.get(index).unwrap() {
+                                let text = (&selected_value).display(COMMON).to_string();
+                                ui.selectable_value(current_value, Some(selected_value), text);
+                            }
+                        }
                     });
             });
             ui.end_row();
@@ -103,6 +103,11 @@ impl Settings {
             // https://numpy.org/devdocs/reference/generated/numpy.std.html
             ui.label("DDOF");
             ui.add(Slider::new(&mut self.ddof, 0..=2));
+            ui.end_row();
+
+            // Logarithmic
+            ui.label(localize!("logarithmic"));
+            ui.checkbox(&mut self.logarithmic, "");
             ui.end_row();
 
             // Filter
