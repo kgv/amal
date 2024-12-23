@@ -1,11 +1,13 @@
 use std::ops::Range;
 
 use super::Settings;
-use crate::{
-    app::panes::widgets::float::FloatValue, special::column::fatty_acids::ColumnExt as _,
-};
+use crate::app::panes::widgets::float::FloatValue;
 use egui::{vec2, Frame, Grid, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
+use lipid::fatty_acid::{
+    display::{DisplayWithOptions as _, COMMON},
+    polars::ColumnExt,
+};
 use polars::prelude::*;
 
 const RETENTION_TIME: usize = 3;
@@ -36,6 +38,13 @@ const ANGLE: usize = 12;
 const LEN: usize = 13;
 
 const MARGIN: Vec2 = vec2(4.0, 0.0);
+
+// const ID: Range<usize> = 0..2;
+// const EXPERIMENTAL: Range<usize> = ID.end..ID.end + 2;
+// const CALCULATED: Range<usize> = EXPERIMENTAL.end..EXPERIMENTAL.end + 11;
+// const LEN: usize = CALCULATED.end;
+
+// const TOP: &[Range<usize>] = &[ID, EXPERIMENTAL, CALCULATED];
 
 /// Table view
 #[derive(Clone, Debug)]
@@ -110,7 +119,7 @@ impl TableView<'_> {
                 ui.heading("Temperature");
             }
             (0, 5) => {
-                ui.heading("Equivalent");
+                ui.heading("Chain length");
             }
             (0, 6) => {
                 ui.heading("Mass");
@@ -168,10 +177,10 @@ impl TableView<'_> {
                 ));
             }
             (row, FA) => {
-                let fatty_acids = self.data_frame["FA"].fa();
-                let fatty_acid = fatty_acids.get(row).unwrap();
-                ui.label(fatty_acid.to_string())
-                    .on_hover_text(fatty_acid.label());
+                let fatty_acids = self.data_frame["FattyAcid"].fatty_acid();
+                let fatty_acid = fatty_acids.get(row).unwrap().unwrap();
+                ui.label(fatty_acid.display(COMMON).to_string());
+                // .on_hover_text(fatty_acid.label());
             }
             (row, ABSOLUTE_TIME) => {
                 let time = self.data_frame["Time"].struct_().unwrap();
@@ -224,7 +233,7 @@ impl TableView<'_> {
                 );
             }
             (row, ECL) => {
-                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
+                let equivalent = self.data_frame["ChainLength"].struct_().unwrap();
                 let ecl = equivalent.field_by_name("ECL").unwrap();
                 ui.add(
                     FloatValue::new(ecl.f64().unwrap().get(row))
@@ -233,7 +242,7 @@ impl TableView<'_> {
                 );
             }
             (row, FCL) => {
-                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
+                let equivalent = self.data_frame["ChainLength"].struct_().unwrap();
                 let fcl = equivalent.field_by_name("FCL").unwrap();
                 ui.add(
                     FloatValue::new(fcl.f64().unwrap().get(row))
@@ -242,7 +251,7 @@ impl TableView<'_> {
                 );
             }
             (row, ECN) => {
-                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
+                let equivalent = self.data_frame["ChainLength"].struct_().unwrap();
                 let ecn = equivalent.field_by_name("ECN").unwrap();
                 ui.label(ecn.str_value(row).unwrap());
             }
@@ -255,7 +264,12 @@ impl TableView<'_> {
                 )
                 .on_hover_ui(|ui| {
                     Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                        ui.label("RCOO");
+                        ui.label("[RCO]+");
+                        let rcoo = mass.field_by_name("RCO").unwrap();
+                        ui.label(rcoo.str_value(row).unwrap());
+                        ui.end_row();
+
+                        ui.label("[RCOO]-");
                         let rcoo = mass.field_by_name("RCOO").unwrap();
                         ui.label(rcoo.str_value(row).unwrap());
                         ui.end_row();

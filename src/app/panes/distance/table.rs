@@ -1,9 +1,11 @@
 use super::Settings;
-use crate::{
-    app::panes::widgets::float::FloatValue, special::column::fatty_acids::ColumnExt as _,
-};
+use crate::app::panes::widgets::float::FloatValue;
 use egui::{vec2, Frame, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
 use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
+use lipid::fatty_acid::{
+    display::{DisplayWithOptions as _, COMMON},
+    polars::ColumnExt,
+};
 use polars::prelude::*;
 
 const INDEX: usize = 0;
@@ -78,34 +80,34 @@ impl TableView<'_> {
         }
     }
 
-    fn body_cell_content_ui(&mut self, ui: &mut Ui, row: usize, col: usize) {
+    fn body_cell_content_ui(&mut self, ui: &mut Ui, row: usize, col: usize) -> PolarsResult<()> {
         match (row, col) {
             (row, INDEX) => {
-                let indices = self.data_frame["Index"].u32().unwrap();
+                let indices = self.data_frame["Index"].u32()?;
                 let value = indices.get(row).unwrap();
                 ui.label(value.to_string());
             }
             (row, MODE) => {
-                let mode = self.data_frame["Mode"].struct_().unwrap();
-                let onset_temperature = mode.field_by_name("OnsetTemperature").unwrap();
-                let temperature_step = mode.field_by_name("TemperatureStep").unwrap();
+                let mode = self.data_frame["Mode"].struct_()?;
+                let onset_temperature = mode.field_by_name("OnsetTemperature")?;
+                let temperature_step = mode.field_by_name("TemperatureStep")?;
                 ui.label(format!(
                     "{}/{}",
-                    onset_temperature.str_value(row).unwrap(),
-                    temperature_step.str_value(row).unwrap()
+                    onset_temperature.str_value(row)?,
+                    temperature_step.str_value(row)?
                 ));
             }
             (row, FROM) => {
-                let fatty_acids = self.data_frame["From"].fa();
-                let fatty_acid = fatty_acids.get(row).unwrap();
-                ui.label(fatty_acid.to_string())
-                    .on_hover_text(fatty_acid.label());
+                let fatty_acids = self.data_frame["From"].fatty_acid();
+                let fatty_acid = fatty_acids.get(row)?.unwrap();
+                ui.label(fatty_acid.display(COMMON).to_string());
+                // .on_hover_text(fatty_acid.label());
             }
             (row, TO) => {
-                let fatty_acids = self.data_frame["To"].fa();
-                let fatty_acid = fatty_acids.get(row).unwrap();
-                ui.label(fatty_acid.to_string())
-                    .on_hover_text(fatty_acid.label());
+                let fatty_acids = self.data_frame["To"].fatty_acid();
+                let fatty_acid = fatty_acids.get(row)?.unwrap();
+                ui.label(fatty_acid.display(COMMON).to_string());
+                // .on_hover_text(fatty_acid.label());
             }
             (row, TIME) => {
                 let time = self.data_frame["Time"].struct_().unwrap();
@@ -148,6 +150,7 @@ impl TableView<'_> {
                 ui.label(value.to_string());
             }
         }
+        Ok(())
     }
 }
 
@@ -161,7 +164,7 @@ impl TableDelegate for TableView<'_> {
     }
 
     fn cell_ui(&mut self, ui: &mut Ui, cell: &CellInfo) {
-        if cell.row_nr % 2 == 1 {
+        if cell.row_nr % 2 == 0 {
             ui.painter()
                 .rect_filled(ui.max_rect(), 0.0, ui.visuals().faint_bg_color);
         }
@@ -169,6 +172,7 @@ impl TableDelegate for TableView<'_> {
             .inner_margin(Margin::symmetric(MARGIN.x, MARGIN.y))
             .show(ui, |ui| {
                 self.body_cell_content_ui(ui, cell.row_nr as _, cell.col_nr)
+                    .unwrap()
             });
     }
 }

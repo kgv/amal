@@ -3,23 +3,23 @@ use std::ops::RangeInclusive;
 
 /// Extension methods for [`Column`]
 pub trait ColumnExt {
-    fn mode(&self) -> Mode;
+    fn mode(&self) -> ModeSeries;
 }
 
 impl ColumnExt for Column {
-    fn mode(&self) -> Mode {
-        Mode::new(self).expect(r#"Expected "Mode" column"#)
+    fn mode(&self) -> ModeSeries {
+        ModeSeries::new(self).expect(r#"Expected "Mode" column"#)
     }
 }
 
-/// Mode
+/// Mode series
 #[derive(Clone)]
-pub struct Mode {
+pub struct ModeSeries {
     pub onset_temperature: Series,
     pub temperature_step: Series,
 }
 
-impl Mode {
+impl ModeSeries {
     pub fn new(column: &Column) -> PolarsResult<Self> {
         let onset_temperature = column.struct_()?.field_by_name("OnsetTemperature")?;
         let temperature_step = column.struct_()?.field_by_name("TemperatureStep")?;

@@ -1,13 +1,15 @@
 use crate::{
     app::{localize, MAX_PRECISION},
-    special::column::{
-        fatty_acids::{ColumnExt as _, FattyAcid},
-        mode::ColumnExt as _,
-    },
+    special::column::mode::ColumnExt as _,
 };
 use egui::{emath::Float, ComboBox, Grid, RichText, Slider, Ui, WidgetText};
 use egui_ext::LabeledSeparator;
 use egui_phosphor::regular::TRASH;
+use lipid::fatty_acid::{
+    display::{DisplayWithOptions, COMMON},
+    polars::ColumnExt,
+    FattyAcid,
+};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -95,20 +97,25 @@ impl Settings {
                 ComboBox::from_id_salt("FilterFattyAcids")
                     // .selected_text(self.sort.text())
                     .show_ui(ui, |ui| {
-                        let fatty_acids = data_frame["FA"]
+                        let fatty_acid = data_frame["FattyAcid"]
                             .unique()
                             .unwrap()
                             .sort(Default::default())
                             .unwrap()
-                            .fa();
-                        for fatty_acid in fatty_acids.iter().unwrap() {
-                            let contains = self.filter.fatty_acids.contains(&fatty_acid);
-                            let mut selected = contains;
-                            ui.toggle_value(&mut selected, fatty_acid.to_string());
-                            if selected && !contains {
-                                self.filter.fatty_acids.push(fatty_acid);
-                            } else if !selected && contains {
-                                self.filter.remove(&fatty_acid);
+                            .fatty_acid();
+                        for index in 0..fatty_acid.len() {
+                            if let Ok(Some(fatty_acid)) = fatty_acid.get(index) {
+                                let contains = self.filter.fatty_acids.contains(&fatty_acid);
+                                let mut selected = contains;
+                                ui.toggle_value(
+                                    &mut selected,
+                                    (&fatty_acid).display(COMMON).to_string(),
+                                );
+                                if selected && !contains {
+                                    self.filter.fatty_acids.push(fatty_acid);
+                                } else if !selected && contains {
+                                    self.filter.remove(&fatty_acid);
+                                }
                             }
                         }
                     });

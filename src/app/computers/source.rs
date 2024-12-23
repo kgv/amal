@@ -1,11 +1,15 @@
-use crate::{
-    app::{
-        panes::source::settings::{Group, Kind, Order, Settings, Sort},
-        MAX_TEMPERATURE,
-    },
-    special::expressions::fatty_acid::{ExprExt as _, FattyAcid as _},
+use crate::app::{
+    panes::source::settings::{Group, Kind, Order, Settings, Sort},
+    MAX_TEMPERATURE,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
+use lipid::fatty_acid::{
+    polars::{
+        expr::{chain_length::Options, mass::Mass as _},
+        ChainLength as _, ExprExt,
+    },
+    Kind as FattyAcidKind,
+};
 use polars::prelude::*;
 use std::{
     f64::NAN,
@@ -41,12 +45,35 @@ impl Computer {
                 .clip_max(lit(MAX_TEMPERATURE))
                 .alias("Temperature"),
                 // FCL
-                fcl().over(["Mode"]).alias("FCL"),
+                col("FattyAcid")
+                    .fatty_acid()
+                    .fcl(
+                        col("TimeMean"),
+                        Options::new().logarithmic(key.settings.logarithmic),
+                    )
+                    .over(["Mode"])
+                    .alias("FCL"),
                 // ECL
-                ecl().over(["Mode"]).alias("ECL"),
+                col("FattyAcid")
+                    .fatty_acid()
+                    .ecl(
+                        col("TimeMean"),
+                        Options::new().logarithmic(key.settings.logarithmic),
+                    )
+                    .over(["Mode"])
+                    .alias("ECL"),
                 // ECN
-                col("FA").fa().ecn().alias("ECN"),
-            ])
+                col("FattyAcid").fatty_acid().ecn().alias("ECN"),
+            ]);
+        println!(
+            "lazy_frame TEMP0: {}",
+            lazy_frame
+                .clone()
+                .unnest([col("FattyAcid")])
+                .collect()
+                .unwrap()
+        );
+        lazy_frame = lazy_frame
             .with_columns([
                 // Delta
                 delta(col("TimeMean")).over(["Mode"]).alias("Delta"),
@@ -57,7 +84,7 @@ impl Computer {
             ])
             .select([
                 col("Mode"),
-                col("FA"),
+                col("FattyAcid"),
                 // Time
                 as_struct(vec![
                     as_struct(vec![
@@ -71,18 +98,35 @@ impl Computer {
                 .alias("Time"),
                 // Temperature
                 col("Temperature"),
-                // Equivalent
-                as_struct(vec![col("ECL"), col("FCL"), col("ECN")]).alias("Equivalent"),
+                // Chain length
+                as_struct(vec![col("ECL"), col("FCL"), col("ECN")]).alias("ChainLength"),
                 // Mass
                 as_struct(vec![
-                    col("FA").fa().mass().alias("RCOOH"),
-                    col("FA").fa().rcoo().mass().alias("RCOO"),
-                    col("FA").fa().rcooch3().mass().alias("RCOOCH3"),
+                    col("FattyAcid")
+                        .fatty_acid()
+                        .mass(FattyAcidKind::Rco)
+                        .alias("RCO"),
+                    col("FattyAcid")
+                        .fatty_acid()
+                        .mass(FattyAcidKind::Rcoo)
+                        .alias("RCOO"),
+                    col("FattyAcid")
+                        .fatty_acid()
+                        .mass(FattyAcidKind::Rcooh)
+                        .alias("RCOOH"),
+                    col("FattyAcid")
+                        .fatty_acid()
+                        .mass(FattyAcidKind::Rcooch3)
+                        .alias("RCOOCH3"),
                 ])
                 .alias("Mass"),
                 // Meta
                 as_struct(vec![col("Delta"), col("Tangent"), col("Angle")]).alias("Meta"),
             ]);
+        println!(
+            "lazy_frame TEMP1: {}",
+            lazy_frame.clone().collect().unwrap()
+        );
         // Filter
         if let Some(onset_temperature) = key.settings.filter.mode.onset_temperature {
             lazy_frame = lazy_frame.filter(
@@ -103,21 +147,16 @@ impl Computer {
         if !key.settings.filter.fatty_acids.is_empty() {
             let mut expr = lit(false);
             for fatty_acid in &key.settings.filter.fatty_acids {
-                // expr = expr.and(col("FA").fa().c().eq(lit(fatty_acid.carbons)).not());
-                let indices = Scalar::new(
-                    DataType::List(Box::new(DataType::UInt8)),
-                    AnyValue::List(Series::from_iter(&fatty_acid.indices)),
-                );
-                let bounds = Scalar::new(
-                    DataType::List(Box::new(DataType::Int8)),
-                    AnyValue::List(Series::from_iter(&fatty_acid.bounds)),
-                );
-                expr = expr.or(col("FA")
-                    .fa()
-                    .c()
-                    .eq(lit(fatty_acid.carbons))
-                    .and(col("FA").fa().indices().eq(lit(indices)))
-                    .and(col("FA").fa().bounds().eq(lit(bounds))));
+                // expr = expr.and(col("FattyAcid").fa().c().eq(lit(fatty_acid.carbons)).not());
+                // let indices = Scalar::new(
+                //     DataType::List(Box::new(DataType::UInt8)),
+                //     AnyValue::List(Series::from_iter(&fatty_acid.indices)),
+                // );
+                // let bounds = Scalar::new(
+                //     DataType::List(Box::new(DataType::Int8)),
+                //     AnyValue::List(Series::from_iter(&fatty_acid.bounds)),
+                // );
+                expr = expr.or(col("FattyAcid").fatty_acid().equal(fatty_acid));
             }
             lazy_frame = lazy_frame.filter(expr);
         }
@@ -142,21 +181,21 @@ impl ComputerMut<Key<'_>, DataFrame> for Computer {
             Kind::Plot => {
                 lazy_frame = lazy_frame.select([
                     col("Mode"),
-                    col("FA"),
+                    col("FattyAcid"),
                     col("Time")
                         .struct_()
                         .field_by_name("Absolute")
                         .struct_()
                         .field_by_name("Mean")
                         .alias("Time"),
-                    col("Equivalent")
+                    col("ChainLength")
                         .struct_()
                         .field_by_name("ECL")
                         .alias("ECL"),
                 ]);
                 lazy_frame
                     .group_by([match key.settings.group {
-                        Group::FattyAcid => col("FA"),
+                        Group::FattyAcid => col("FattyAcid"),
                         Group::OnsetTemperature => {
                             col("Mode").struct_().field_by_name("OnsetTemperature")
                         }
@@ -205,10 +244,11 @@ impl LazyFrameExt for LazyFrame {
         self.sort_by_exprs(
             [
                 col("Mode"),
-                col("FA").fa().c(),
-                col("FA").fa().unsaturation(),
-                col("FA").fa().indices(),
-                col("FA").fa().bounds(),
+                col("FattyAcid"),
+                // col("FattyAcid").fatty_acid().carbons(),
+                // col("FattyAcid").fatty_acid().unsaturated().sum(),
+                // col("FattyAcid").fatty_acid().indices(),
+                // col("FattyAcid").fatty_acid().bounds(),
             ],
             sort_options,
         )
@@ -218,7 +258,7 @@ impl LazyFrameExt for LazyFrame {
         self.sort(["Mode"], sort_options.clone()).select([all()
             .sort_by(
                 &[
-                    col("Equivalent").struct_().field_by_name("ECL"),
+                    col("ChainLength").struct_().field_by_name("ECL"),
                     col("Time")
                         .struct_()
                         .field_by_name("Absolute")
@@ -237,18 +277,19 @@ fn relative_time(settings: &Settings) -> Expr {
             col("TimeMean")
                 / col("TimeMean")
                     .filter(
-                        col("FA")
-                            .fa()
-                            .c()
-                            .eq(lit(relative.carbons))
-                            .and(col("FA").fa().indices().eq(lit(Scalar::new(
-                                DataType::List(Box::new(DataType::UInt8)),
-                                AnyValue::List(Series::from_iter(relative.indices.iter())),
-                            ))))
-                            .and(col("FA").fa().bounds().eq(lit(Scalar::new(
-                                DataType::List(Box::new(DataType::Int8)),
-                                AnyValue::List(Series::from_iter(relative.bounds.iter())),
-                            )))),
+                        // col("FattyAcid")
+                        //     .fatty_acid()
+                        //     .c()
+                        //     .eq(lit(relative.carbons))
+                        //     .and(col("FattyAcid").fatty_acid().indices().eq(lit(Scalar::new(
+                        //         DataType::List(Box::new(DataType::UInt8)),
+                        //         AnyValue::List(Series::from_iter(relative.indices.iter())),
+                        //     ))))
+                        //     .and(col("FattyAcid").fatty_acid().bounds().eq(lit(Scalar::new(
+                        //         DataType::List(Box::new(DataType::Int8)),
+                        //         AnyValue::List(Series::from_iter(relative.bounds.iter())),
+                        //     )))),
+                        col("FattyAcid").fatty_acid().equal(relative),
                     )
                     .first()
         }
@@ -256,16 +297,19 @@ fn relative_time(settings: &Settings) -> Expr {
     }
 }
 
-fn ecl() -> Expr {
-    saturated(col("FA").fa().c()).forward_fill(None) + fcl()
-}
+/// Saturated
+pub trait Saturated {
+    /// Angle
+    fn angle(self) -> Expr;
 
-fn fcl() -> Expr {
-    ternary_expr(
-        col("FA").fa().saturated(),
-        lit(0),
-        (col("TimeMean") - saturated(col("TimeMean")).forward_fill(None)) / delta(col("TimeMean")),
-    )
+    /// Tangent
+    fn tangent(self) -> Expr;
+
+    /// Backward saturated
+    fn backward(self) -> Expr;
+
+    /// Forward saturated
+    fn forward(self) -> Expr;
 }
 
 fn angle() -> Expr {
@@ -273,7 +317,14 @@ fn angle() -> Expr {
 }
 
 fn tangent() -> Expr {
-    delta(col("ECL")) / delta(col("TimeMean"))
+    let saturated_ecl = || col("FattyAcid").fatty_acid().saturated_or_null(col("ECL"));
+    let saturated_time = || {
+        col("FattyAcid")
+            .fatty_acid()
+            .saturated_or_null(col("TimeMean"))
+    };
+    (saturated_ecl().backward_fill(None) - saturated_ecl().forward_fill(None))
+        / (saturated_time().backward_fill(None) - saturated_time().forward_fill(None))
 }
 
 fn delta(expr: Expr) -> Expr {
@@ -281,14 +332,18 @@ fn delta(expr: Expr) -> Expr {
 }
 
 fn saturated(expr: Expr) -> Expr {
-    ternary_expr(col("FA").fa().saturated(), expr, lit(NULL))
+    ternary_expr(
+        col("FattyAcid").fatty_acid().is_saturated(),
+        expr,
+        lit(NULL),
+    )
 }
 
 // fn slope() -> Expr {
 //     ternary_expr(
-//         col("FA").fa().saturated(),
+//         col("FattyAcid").fa().saturated(),
 //         lit(0),
-//         ternary_expr(col("FA").fa().saturated(), col("FA").fa().c(), lit(NULL)).forward_fill(None)
+//         ternary_expr(col("FattyAcid").fa().saturated(), col("FattyAcid").fa().c(), lit(NULL)).forward_fill(None)
 //             + (col("Time").struct_().field_by_name("Mean") - time().forward_fill(None))
 //                 / (time().backward_fill(None) - time().forward_fill(None)),
 //     )

@@ -67,7 +67,7 @@ impl App {
         add_to_fonts(&mut fonts, Variant::Regular);
         cc.egui_ctx.set_fonts(fonts);
 
-        // return Default::default();
+        return Default::default();
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         cc.storage
@@ -284,85 +284,8 @@ impl App {
                             .button(RichText::new(format!("{DATABASE} IPPRAS/Agilent")).heading())
                             .clicked()
                         {
-                            let data_frame: DataFrame = bincode::deserialize(AGILENT).unwrap();
-                            println!("data_frame0: {data_frame}");
-                            let mut lazy_frame = data_frame.lazy();
-                            // col("FA").struct_().field_by_name("Carbons"),
-                            lazy_frame = lazy_frame
-                                .with_row_index("IDX", None)
-                                .unnest([col("FA")])
-                                .explode([col("Indices"), col("Bounds")])
-                                .with_columns([
-                                    col("Indices").alias("Index"),
-                                    col("Bounds").sign().alias("Isomerism"),
-                                    col("Bounds")
-                                        .abs()
-                                        .cast(DataType::UInt8)
-                                        .alias("Unsaturation"),
-                                ]);
-                            println!("lazy_frame1: {}", lazy_frame.clone().collect().unwrap());
-                            lazy_frame = lazy_frame.group_by(["IDX"]).agg([
-                                col("Mode").first(),
-                                col("Carbons").first(),
-                                as_struct(vec![
-                                    col("Index"),
-                                    col("Isomerism"),
-                                    col("Unsaturation"),
-                                ])
-                                .alias("Unsaturated"),
-                                col("Label").first(),
-                                col("Time").first(),
-                            ]);
-                            println!("lazy_frame2: {}", lazy_frame.clone().collect().unwrap());
-                            lazy_frame = lazy_frame.cache().with_columns([
-                                when(
-                                    col("Unsaturated").eq(concat_list([as_struct(vec![
-                                        lit(NULL).alias("Index"),
-                                        lit(NULL).alias("Isomerism"),
-                                        lit(NULL).alias("Unsaturation"),
-                                    ])])
-                                    .unwrap()),
-                                )
-                                .then(lit(Scalar::new(
-                                    DataType::List(Box::new(DataType::Null)),
-                                    AnyValue::List(Series::new_empty(
-                                        PlSmallStr::EMPTY,
-                                        &DataType::Null,
-                                    )),
-                                )))
-                                // .then(lit(NULL))
-                                .otherwise(col("Unsaturated"))
-                                .alias("Unsaturated"),
-                                // true,
-                            ]);
-                            // .with_columns([col("Unsaturated").list().eval(
-                            //     when(col("").eq(as_struct(vec![
-                            //         lit(NULL).alias("Index"),
-                            //         lit(NULL).alias("Isomerism"),
-                            //         lit(NULL).alias("Unsaturation"),
-                            //     ])))
-                            //     .then(lit(Scalar::new(
-                            //         DataType::List(Box::new(DataType::Null)),
-                            //         AnyValue::List(Series::new_empty(PlSmallStr::EMPTY, &DataType::Null)),
-                            //     )))
-                            //     // .then(lit(NULL))
-                            //     .otherwise(col("")),
-                            //     true,
-                            // )]);
-                            println!("lazy_frame3: {}", lazy_frame.clone().collect().unwrap());
-                            lazy_frame = lazy_frame.select([
-                                col("IDX").alias("Index"),
-                                col("Mode"),
-                                as_struct(vec![col("Carbons"), col("Unsaturated")])
-                                    .alias("FattyAcid"),
-                                col("Label"),
-                                col("Time"),
-                            ]);
-                            println!("lazy_frame4: {}", lazy_frame.clone().collect().unwrap());
-                            let data_frame = lazy_frame.clone().collect().unwrap();
-                            data::save("df.ron", data::Format::Ron, data_frame).unwrap();
-                            std::process::exit(0);
-                            self.tree.insert_pane::<VERTICAL>(Pane::source(data_frame));
+                            self.tree
+                                .insert_pane::<VERTICAL>(Pane::source(AGILENT.clone()));
                             ui.close_menu();
                         }
                     });

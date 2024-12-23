@@ -1,14 +1,16 @@
 use crate::{
     app::{localize, text::Text, MAX_PRECISION},
-    special::column::{
-        fatty_acids::{ColumnExt as _, FattyAcid},
-        mode::ColumnExt as _,
-    },
+    special::{column::mode::ColumnExt as _, data_frame::DataFrameExt as _},
 };
 use egui::{emath::Float, ComboBox, Grid, RichText, Slider, Ui};
 use egui_ext::LabeledSeparator;
 use egui_phosphor::regular::TRASH;
 use itertools::Itertools;
+use lipid::fatty_acid::{
+    display::{DisplayWithOptions, COMMON},
+    polars::{column::ColumnExt as _, DataFrameExt as _},
+    FattyAcid,
+};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
@@ -23,6 +25,7 @@ pub(crate) struct Settings {
 
     pub(crate) kind: Kind,
     pub(crate) ddof: u8,
+    pub(crate) logarithmic: bool,
     pub(crate) relative: Option<FattyAcid>,
     pub(crate) filter: Filter,
     pub(crate) sort: Sort,
@@ -41,6 +44,7 @@ impl Settings {
 
             kind: Kind::Table,
             ddof: 1,
+            logarithmic: false,
             relative: None,
             filter: Filter::new(),
             sort: Sort::Time,
@@ -75,22 +79,22 @@ impl Settings {
             // Relative
             ui.label("Relative").on_hover_text("Relative fatty acid");
             ui.horizontal(|ui| {
+                let selected_text = self
+                    .relative
+                    .as_ref()
+                    .map(|relative| relative.display(COMMON).to_string())
+                    .unwrap_or_default();
                 ComboBox::from_id_salt(ui.auto_id_with("Relative"))
-                    .selected_text(
-                        self.relative
-                            .as_ref()
-                            .map(ToString::to_string)
-                            .unwrap_or_default(),
-                    )
+                    .selected_text(selected_text)
                     .show_ui(ui, |ui| {
                         let current_value = &mut self.relative;
-                        let fatty_acids = data_frame["FA"].fa();
-                        for selected_value in
-                            fatty_acids.saturated().unwrap().iter().unwrap().unique()
-                        {
-                            let text = selected_value.to_string();
-                            ui.selectable_value(current_value, Some(selected_value), text);
-                        }
+                        let fatty_acids = data_frame.fatty_acid();
+                        // for selected_value in
+                        //     fatty_acids.saturated().unwrap().iter().unwrap().unique()
+                        // {
+                        //     let text = selected_value.to_string();
+                        //     ui.selectable_value(current_value, Some(selected_value), text);
+                        // }
                     });
             });
             ui.end_row();
@@ -136,8 +140,7 @@ impl Settings {
                     .selected_text(format!("{:?}", self.filter.mode.temperature_step))
                     .show_ui(ui, |ui| {
                         let current_value = &mut self.filter.mode.temperature_step;
-                        for selected_value in &data_frame["Mode"].mode().temperature_step().unique()
-                        {
+                        for selected_value in &data_frame.mode().temperature_step().unique() {
                             ui.selectable_value(
                                 current_value,
                                 selected_value,
@@ -164,20 +167,25 @@ impl Settings {
                 ComboBox::from_id_salt("FattyAcidsFilter")
                     .selected_text(self.filter.fatty_acids.len().to_string())
                     .show_ui(ui, |ui| {
-                        let fatty_acids = data_frame["FA"]
+                        let fatty_acid = data_frame["FattyAcid"]
                             .unique()
                             .unwrap()
                             .sort(Default::default())
                             .unwrap()
-                            .fa();
-                        for fatty_acid in fatty_acids.iter().unwrap() {
-                            let contains = self.filter.fatty_acids.contains(&fatty_acid);
-                            let mut selected = contains;
-                            ui.toggle_value(&mut selected, fatty_acid.to_string());
-                            if selected && !contains {
-                                self.filter.fatty_acids.push(fatty_acid);
-                            } else if !selected && contains {
-                                self.filter.remove(&fatty_acid);
+                            .fatty_acid();
+                        for index in 0..fatty_acid.len() {
+                            if let Ok(Some(fatty_acid)) = fatty_acid.get(index) {
+                                let contains = self.filter.fatty_acids.contains(&fatty_acid);
+                                let mut selected = contains;
+                                ui.toggle_value(
+                                    &mut selected,
+                                    (&fatty_acid).display(COMMON).to_string(),
+                                );
+                                if selected && !contains {
+                                    self.filter.fatty_acids.push(fatty_acid);
+                                } else if !selected && contains {
+                                    self.filter.remove(&fatty_acid);
+                                }
                             }
                         }
                     });
