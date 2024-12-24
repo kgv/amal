@@ -18,6 +18,8 @@ jobs:
   build-github-pages:
     runs-on: ubuntu-latest
     steps:
+      - name: Configure Git for HTTPS
+        run: git config --global url."https://${{ secrets.LIPID }}@github.com".insteadOf https://github.com
       - uses: actions/checkout@v4 # repo checkout
       - name: Setup toolchain for wasm
         run: |

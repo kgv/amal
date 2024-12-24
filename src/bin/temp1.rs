@@ -79,7 +79,7 @@ use walkdir::WalkDir;
 // data::save("df.ron", data::Format::Ron, data_frame).unwrap();
 // std::process::exit(0);
 fn main() -> Result<()> {
-    let content = include_str!("../../df.ron");
+    // let content = include_str!("../../df.ron");
     let data_frame: DataFrame = ron::de::from_str(content).unwrap();
     println!("data_frame: {data_frame}");
     // println!(
