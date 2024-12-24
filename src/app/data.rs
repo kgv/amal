@@ -4,7 +4,7 @@ use ron::{extensions::Extensions, ser::PrettyConfig};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display, Formatter},
-    fs::{write, File},
+    fs::{File, write},
     path::Path,
 };
 

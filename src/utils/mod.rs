@@ -1,7 +1,4 @@
-pub(crate) use self::{
-    egui_tiles::{ContainerExt, TilesExt, TreeExt},
-    polars::ChunkedArrayExt,
-};
+pub(crate) use self::polars::ChunkedArrayExt;
 
-mod egui_tiles;
+// mod egui_tiles;
 mod polars;

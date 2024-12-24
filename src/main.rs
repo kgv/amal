@@ -5,9 +5,9 @@ use amal::App;
 // Native
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
-    std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "2");
-    std::env::set_var("POLARS_FMT_MAX_COLS", "256");
-    std::env::set_var("POLARS_FMT_STR_LEN", "256");
+    unsafe { std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "2") };
+    unsafe { std::env::set_var("POLARS_FMT_MAX_COLS", "256") };
+    unsafe { std::env::set_var("POLARS_FMT_STR_LEN", "256") };
 
     // Log to stdout (if you run with `RUST_LOG=debug`).
     tracing_subscriber::fmt::init();

@@ -6,7 +6,7 @@ use self::{
 };
 use crate::app::{
     computers::{SourceComputed, SourceKey},
-    data::{save, Format},
+    data::{Format, save},
     localize,
 };
 use egui::{Id, RichText, Ui, Window};
@@ -101,14 +101,8 @@ impl Pane {
             })
         });
         match self.control.settings.kind {
-            Kind::Plot => {
-                PlotView::new(&self.target, &self.control.settings)
-                    .unwrap()
-                    .ui(ui);
-            }
-            Kind::Table => {
-                TableView::new(&self.target, &self.control.settings).ui(ui);
-            }
+            Kind::Plot => PlotView::new(&self.target, &self.control.settings).ui(ui),
+            Kind::Table => TableView::new(&self.target, &self.control.settings).ui(ui),
         };
     }
 
@@ -117,7 +111,9 @@ impl Pane {
             .id(ui.next_auto_id())
             .open(&mut self.control.open)
             .show(ui.ctx(), |ui| {
-                self.control.settings.ui(ui, &self.source);
+                if let Err(error) = self.control.settings.ui(ui, &self.source) {
+                    error!(%error);
+                }
             });
     }
 }

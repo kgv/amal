@@ -1,23 +1,22 @@
-use self::panes::{behavior::Behavior, Pane};
-use crate::utils::TreeExt;
+use self::panes::{Pane, behavior::Behavior};
+use crate::presets::AGILENT;
 use anyhow::Result;
 use data::Data;
-use eframe::{get_value, set_value, APP_KEY};
+use eframe::{APP_KEY, get_value, set_value};
 use egui::{
-    menu::bar, warn_if_debug_build, Align, Align2, CentralPanel, Color32, DroppedFile,
-    FontDefinitions, Id, LayerId, Layout, Order, RichText, ScrollArea, SidePanel, TextStyle,
-    TopBottomPanel,
+    Align, Align2, CentralPanel, Color32, DroppedFile, FontDefinitions, Id, LayerId, Layout, Order,
+    RichText, ScrollArea, SidePanel, TextStyle, TopBottomPanel, menu::bar, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt, HoveredFileExt, LightDarkButton};
 use egui_phosphor::{
-    add_to_fonts,
+    Variant, add_to_fonts,
     regular::{
         ARROWS_CLOCKWISE, DATABASE, FLOPPY_DISK, GRID_FOUR, ROCKET, SIDEBAR_SIMPLE,
         SQUARE_SPLIT_HORIZONTAL, SQUARE_SPLIT_VERTICAL, TABLE, TABS, TRASH,
     },
-    Variant,
 };
 use egui_tiles::{ContainerKind, Tile, Tiles, Tree};
+use egui_tiles_ext::{TreeExt as _, VERTICAL};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Write, str, time::Duration};
@@ -32,7 +31,6 @@ const MAX_PRECISION: usize = 16;
 const MAX_TEMPERATURE: f64 = 250.0;
 const _NOTIFICATIONS_DURATION: Duration = Duration::from_secs(15);
 const SIZE: f32 = 32.0;
-const AGILENT: &[u8] = include_bytes!("../../assets/1/agilent.bin");
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
@@ -155,8 +153,10 @@ impl App {
                 .collect()
                 .unwrap();
             println!("data_frame: {data_frame}");
-            self.tree.insert_pane(Pane::source(data_frame.clone()));
-            self.tree.insert_pane(Pane::distance(data_frame.clone()));
+            self.tree
+                .insert_pane::<VERTICAL>(Pane::source(data_frame.clone()));
+            self.tree
+                .insert_pane::<VERTICAL>(Pane::distance(data_frame.clone()));
             data::save("data_frame.bin", data::Format::Bin, data_frame).unwrap();
         }
     }
@@ -232,17 +232,6 @@ impl App {
                         ui.memory_mut(|memory| *memory = Default::default());
                     }
                     ui.separator();
-                    ui.menu_button(RichText::new(DATABASE).size(SIZE), |ui| {
-                        if ui
-                            .button(RichText::new(format!("{DATABASE} IPPRAS/Agilent")).heading())
-                            .clicked()
-                        {
-                            let data_frame = bincode::deserialize(AGILENT).unwrap();
-                            self.tree.insert_pane(Pane::source(data_frame));
-                            ui.close_menu();
-                        }
-                    });
-                    ui.separator();
                     if ui
                         .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(SIZE))
                         .on_hover_text(localize!("vertical"))
@@ -288,6 +277,17 @@ impl App {
                         }
                     }
                     ui.separator();
+                    ui.menu_button(RichText::new(DATABASE).size(SIZE), |ui| {
+                        if ui
+                            .button(RichText::new(format!("{DATABASE} IPPRAS/Agilent")).heading())
+                            .clicked()
+                        {
+                            self.tree
+                                .insert_pane::<VERTICAL>(Pane::source(AGILENT.clone()));
+                            ui.close_menu();
+                        }
+                    });
+                    ui.separator();
                 });
             });
         });
@@ -297,7 +297,8 @@ impl App {
 impl App {
     fn distance(&mut self, ctx: &egui::Context) {
         if let Some(data_frame) = ctx.data_mut(|data| data.remove_temp(Id::new("Distance"))) {
-            self.tree.insert_pane(Pane::distance(data_frame));
+            self.tree
+                .insert_pane::<VERTICAL>(Pane::distance(data_frame));
         }
     }
 }

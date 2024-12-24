@@ -1,41 +1,32 @@
+use super::Settings;
+use crate::app::panes::widgets::float::FloatValue;
+use egui::{Frame, Grid, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2, vec2};
+use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
+use lipid::fatty_acid::{
+    display::{COMMON, DisplayWithOptions as _},
+    polars::ColumnExt,
+};
+use polars::prelude::*;
 use std::ops::Range;
 
-use super::Settings;
-use crate::{
-    app::panes::widgets::float::FloatValue, special::columns::fatty_acids::ColumnExt as _,
-};
-use egui::{vec2, Frame, Grid, Id, Margin, TextStyle, TextWrapMode, Ui, Vec2};
-use egui_table::{AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate};
-use polars::prelude::*;
-
-const RETENTION_TIME: usize = 3;
-const EQUIVALENT: usize = 5;
-
-const INDEX_RANGE: Range<usize> = 0..1;
-const MODE_RANGE: Range<usize> = INDEX_RANGE.end..INDEX_RANGE.end + 1;
-const FA_RANGE: Range<usize> = MODE_RANGE.end..MODE_RANGE.end + 1;
-const TIME_RANGE: Range<usize> = FA_RANGE.end..FA_RANGE.end + 2;
-const TEMPERATURE_RANGE: Range<usize> = TIME_RANGE.end..TIME_RANGE.end + 1;
-const EQUIVALENT_RANGE: Range<usize> = TEMPERATURE_RANGE.end..TEMPERATURE_RANGE.end + 3;
-const MASS_RANGE: Range<usize> = EQUIVALENT_RANGE.end..EQUIVALENT_RANGE.end + 1;
-const META_RANGE: Range<usize> = MASS_RANGE.end..MASS_RANGE.end + 3;
-
-const INDEX: usize = 0;
-const MODE: usize = 1;
-const FA: usize = 2;
-const ABSOLUTE_TIME: usize = 3;
-const RELATIVE_TIME: usize = 4;
-const TEMPERATURE: usize = 5;
-const ECL: usize = 6;
-const FCL: usize = 7;
-const ECN: usize = 8;
-const MASS: usize = 9;
-const DELTA: usize = 10;
-const TANGENT: usize = 11;
-const ANGLE: usize = 12;
-const LEN: usize = 13;
-
 const MARGIN: Vec2 = vec2(4.0, 0.0);
+
+const ID: Range<usize> = 0..3;
+const RETENTION_TIME: Range<usize> = ID.end..ID.end + 3;
+const TEMPERATURE: Range<usize> = RETENTION_TIME.end..RETENTION_TIME.end + 1;
+const CHAIN_LENGTH: Range<usize> = TEMPERATURE.end..TEMPERATURE.end + 3;
+const MASS: Range<usize> = CHAIN_LENGTH.end..CHAIN_LENGTH.end + 1;
+const DERIVATIVE: Range<usize> = MASS.end..MASS.end + 2;
+const LEN: usize = DERIVATIVE.end;
+
+const TOP: &[Range<usize>] = &[
+    ID,
+    RETENTION_TIME,
+    TEMPERATURE,
+    CHAIN_LENGTH,
+    MASS,
+    DERIVATIVE,
+];
 
 /// Table view
 #[derive(Clone, Debug)]
@@ -71,16 +62,7 @@ impl TableView<'_> {
             .headers([
                 HeaderRow {
                     height,
-                    groups: vec![
-                        INDEX_RANGE,
-                        MODE_RANGE,
-                        FA_RANGE,
-                        TIME_RANGE,
-                        TEMPERATURE_RANGE,
-                        EQUIVALENT_RANGE,
-                        MASS_RANGE,
-                        META_RANGE,
-                    ],
+                    groups: TOP.to_vec(),
                 },
                 HeaderRow::new(height),
             ])
@@ -88,76 +70,76 @@ impl TableView<'_> {
             .show(ui, self);
     }
 
-    fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: usize) {
+    fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
         if self.settings.truncate {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {
             // Top
-            (0, 0) => {
-                ui.heading("Index");
+            (0, ID) => {
+                ui.heading("ID");
             }
-            (0, 1) => {
-                ui.heading("Mode");
-            }
-            (0, 2) => {
-                ui.heading("Fatty acid");
-            }
-            (0, 3) => {
+            (0, RETENTION_TIME) => {
                 ui.heading("Retention time");
             }
-            (0, 4) => {
+            (0, TEMPERATURE) => {
                 ui.heading("Temperature");
             }
-            (0, 5) => {
-                ui.heading("Equivalent");
+            (0, CHAIN_LENGTH) => {
+                ui.heading("Chain length");
             }
-            (0, 6) => {
+            (0, MASS) => {
                 ui.heading("Mass");
             }
-            (0, 7) => {
-                ui.heading("Meta");
+            (0, DERIVATIVE) => {
+                ui.heading("Derivative");
             }
             // Bottom
-            (1, 0..3) => {}
-            (1, 3) => {
+            (1, id::INDEX) => {
+                ui.heading("Index");
+            }
+            (1, id::MODE) => {
+                ui.heading("Mode");
+            }
+            (1, id::FA) => {
+                ui.heading("Fatty acid");
+            }
+            (1, retention_time::ABSOLUTE) => {
                 ui.heading("Absolute");
             }
-            (1, 4) => {
+            (1, retention_time::RELATIVE) => {
                 ui.heading("Relative");
             }
-            (1, 5) => {}
-            (1, ECL) => {
-                ui.heading("ECL");
-            }
-            (1, FCL) => {
-                ui.heading("FCL");
-            }
-            (1, ECN) => {
-                ui.heading("ECN");
-            }
-            (1, MASS) => {}
-            (1, DELTA) => {
+            (1, retention_time::DELTA) => {
                 ui.heading("Delta");
             }
-            (1, TANGENT) => {
-                ui.heading("Tan");
+            (1, chain_length::ECL) => {
+                ui.heading("ECL");
             }
-            (1, ANGLE) => {
+            (1, chain_length::FCL) => {
+                ui.heading("FCL");
+            }
+            (1, chain_length::ECN) => {
+                ui.heading("ECN");
+            }
+            (1, derivative::SLOPE) => {
+                ui.heading("Slope");
+            }
+            (1, derivative::ANGLE) => {
                 ui.heading("Angle");
             }
-            _ => {} // _ => unreachable!(),
+            _ => {}
         }
     }
 
-    fn body_cell_content_ui(&mut self, ui: &mut Ui, row: usize, col: usize) {
-        match (row, col) {
-            (row, INDEX) => {
-                let indices = self.data_frame["Index"].u32().unwrap();
-                let value = indices.get(row).unwrap();
+    fn body_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
+        match (row, column) {
+            (row, id::INDEX) => {
+                let index = self.data_frame["Index"].u32().unwrap();
+                let value = index.get(row).unwrap();
                 ui.label(value.to_string());
             }
-            (row, MODE) => {
+            (row, id::MODE) => {
                 let mode = self.data_frame["Mode"].struct_().unwrap();
                 let onset_temperature = mode.field_by_name("OnsetTemperature").unwrap();
                 let temperature_step = mode.field_by_name("TemperatureStep").unwrap();
@@ -167,15 +149,15 @@ impl TableView<'_> {
                     temperature_step.str_value(row).unwrap()
                 ));
             }
-            (row, FA) => {
-                let fatty_acids = self.data_frame["FA"].fa();
-                let fatty_acid = fatty_acids.get(row).unwrap();
-                ui.label(fatty_acid.to_string())
-                    .on_hover_text(fatty_acid.label());
+            (row, id::FA) => {
+                let fatty_acids = self.data_frame["FattyAcid"].fatty_acid();
+                let fatty_acid = fatty_acids.get(row).unwrap().unwrap();
+                ui.label(format!("{:#}", fatty_acid.display(COMMON)));
+                // .on_hover_text(fatty_acid.label());
             }
-            (row, ABSOLUTE_TIME) => {
-                let time = self.data_frame["Time"].struct_().unwrap();
-                let absolute = time.field_by_name("Absolute").unwrap();
+            (row, retention_time::ABSOLUTE) => {
+                let retention_time = self.data_frame["RetentionTime"].struct_().unwrap();
+                let absolute = retention_time.field_by_name("Absolute").unwrap();
                 let absolute = absolute.struct_().unwrap();
                 let mean = absolute.field_by_name("Mean").unwrap();
                 ui.add(
@@ -183,6 +165,7 @@ impl TableView<'_> {
                         .precision(Some(self.settings.precision)),
                 )
                 .on_hover_ui(|ui| {
+                    ui.spacing_mut().item_spacing.x = 0.0;
                     let standard_deviation = absolute.field_by_name("StandardDeviation").unwrap();
                     ui.horizontal(|ui| {
                         ui.label(mean.str_value(row).unwrap());
@@ -191,7 +174,8 @@ impl TableView<'_> {
                     });
                 })
                 .on_hover_ui(|ui| {
-                    ui.heading("Repetitions");
+                    ui.spacing_mut().item_spacing.x = 0.0;
+                    ui.heading("Repeats");
                     let values = absolute
                         .field_by_name("Values")
                         .unwrap()
@@ -199,18 +183,27 @@ impl TableView<'_> {
                         .unwrap()
                         .get_as_series(row)
                         .unwrap();
-                    ui.horizontal(|ui| {
+                    ui.vertical(|ui| {
                         for value in values.iter() {
                             ui.label(value.to_string());
                         }
                     });
                 });
             }
-            (row, RELATIVE_TIME) => {
-                let time = self.data_frame["Time"].struct_().unwrap();
-                let relative = time.field_by_name("Relative").unwrap();
+            (row, retention_time::RELATIVE) => {
+                let retention_time = self.data_frame["RetentionTime"].struct_().unwrap();
+                let relative = retention_time.field_by_name("Relative").unwrap();
                 ui.add(
                     FloatValue::new(relative.f64().unwrap().get(row))
+                        .precision(Some(self.settings.precision))
+                        .hover(),
+                );
+            }
+            (row, retention_time::DELTA) => {
+                let retention_time = self.data_frame["RetentionTime"].struct_().unwrap();
+                let delta = retention_time.field_by_name("Delta").unwrap();
+                ui.add(
+                    FloatValue::new(delta.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
                 );
@@ -223,27 +216,27 @@ impl TableView<'_> {
                         .hover(),
                 );
             }
-            (row, ECL) => {
-                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
-                let ecl = equivalent.field_by_name("ECL").unwrap();
+            (row, chain_length::ECL) => {
+                let chain_length = self.data_frame["ChainLength"].struct_().unwrap();
+                let ecl = chain_length.field_by_name("ECL").unwrap();
                 ui.add(
                     FloatValue::new(ecl.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
                 );
             }
-            (row, FCL) => {
-                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
-                let fcl = equivalent.field_by_name("FCL").unwrap();
+            (row, chain_length::FCL) => {
+                let chain_length = self.data_frame["ChainLength"].struct_().unwrap();
+                let fcl = chain_length.field_by_name("FCL").unwrap();
                 ui.add(
                     FloatValue::new(fcl.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
                 );
             }
-            (row, ECN) => {
-                let equivalent = self.data_frame["Equivalent"].struct_().unwrap();
-                let ecn = equivalent.field_by_name("ECN").unwrap();
+            (row, chain_length::ECN) => {
+                let chain_length = self.data_frame["ChainLength"].struct_().unwrap();
+                let ecn = chain_length.field_by_name("ECN").unwrap();
                 ui.label(ecn.str_value(row).unwrap());
             }
             (row, MASS) => {
@@ -255,7 +248,12 @@ impl TableView<'_> {
                 )
                 .on_hover_ui(|ui| {
                     Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                        ui.label("RCOO");
+                        ui.label("[RCO]+");
+                        let rcoo = mass.field_by_name("RCO").unwrap();
+                        ui.label(rcoo.str_value(row).unwrap());
+                        ui.end_row();
+
+                        ui.label("[RCOO]-");
                         let rcoo = mass.field_by_name("RCOO").unwrap();
                         ui.label(rcoo.str_value(row).unwrap());
                         ui.end_row();
@@ -270,37 +268,26 @@ impl TableView<'_> {
                     });
                 });
             }
-            (row, DELTA) => {
-                let equivalent = self.data_frame["Meta"].struct_().unwrap();
-                let dx = equivalent.field_by_name("Delta").unwrap();
-                ui.add(
-                    FloatValue::new(dx.f64().unwrap().get(row))
-                        .precision(Some(self.settings.precision))
-                        .hover(),
-                );
-            }
-            (row, TANGENT) => {
-                let equivalent = self.data_frame["Meta"].struct_().unwrap();
-                let slope = equivalent.field_by_name("Tangent").unwrap();
+            (row, derivative::SLOPE) => {
+                let derivative = self.data_frame["Derivative"].struct_().unwrap();
+                let slope = derivative.field_by_name("Slope").unwrap();
                 ui.add(
                     FloatValue::new(slope.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
                 );
             }
-            (row, ANGLE) => {
-                let equivalent = self.data_frame["Meta"].struct_().unwrap();
-                let angle = equivalent.field_by_name("Angle").unwrap();
+            (row, derivative::ANGLE) => {
+                let derivative = self.data_frame["Derivative"].struct_().unwrap();
+                let angle = derivative.field_by_name("Angle").unwrap();
                 ui.add(
                     FloatValue::new(angle.f64().unwrap().get(row))
                         .precision(Some(self.settings.precision))
                         .hover(),
                 );
             }
-            (row, column) => {
-                let value = self.data_frame[column - 1].get(row).unwrap().str_value();
-                ui.label(value);
-            }
+            _ => unreachable!(),
+            // _ => {}
         }
     }
 }
@@ -310,7 +297,7 @@ impl TableDelegate for TableView<'_> {
         Frame::none()
             .inner_margin(Margin::symmetric(MARGIN.x, MARGIN.y))
             .show(ui, |ui| {
-                self.header_cell_content_ui(ui, cell.row_nr, cell.group_index)
+                self.header_cell_content_ui(ui, cell.row_nr, cell.col_range.clone())
             });
     }
 
@@ -322,7 +309,38 @@ impl TableDelegate for TableView<'_> {
         Frame::none()
             .inner_margin(Margin::symmetric(MARGIN.x, MARGIN.y))
             .show(ui, |ui| {
-                self.body_cell_content_ui(ui, cell.row_nr as _, cell.col_nr)
+                self.body_cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1)
             });
     }
+}
+
+mod id {
+    use super::*;
+
+    pub(super) const INDEX: Range<usize> = ID.start..ID.start + 1;
+    pub(super) const MODE: Range<usize> = INDEX.end..INDEX.end + 1;
+    pub(super) const FA: Range<usize> = MODE.end..MODE.end + 1;
+}
+
+mod retention_time {
+    use super::*;
+
+    pub(super) const ABSOLUTE: Range<usize> = RETENTION_TIME.start..RETENTION_TIME.start + 1;
+    pub(super) const RELATIVE: Range<usize> = ABSOLUTE.end..ABSOLUTE.end + 1;
+    pub(super) const DELTA: Range<usize> = RELATIVE.end..RELATIVE.end + 1;
+}
+
+mod chain_length {
+    use super::*;
+
+    pub(super) const ECL: Range<usize> = CHAIN_LENGTH.start..CHAIN_LENGTH.start + 1;
+    pub(super) const FCL: Range<usize> = ECL.end..ECL.end + 1;
+    pub(super) const ECN: Range<usize> = FCL.end..FCL.end + 1;
+}
+
+mod derivative {
+    use super::*;
+
+    pub(super) const SLOPE: Range<usize> = DERIVATIVE.start..DERIVATIVE.start + 1;
+    pub(super) const ANGLE: Range<usize> = SLOPE.end..SLOPE.end + 1;
 }

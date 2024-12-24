@@ -1,7 +1,7 @@
 use self::{control::Control, settings::Settings};
 use crate::app::{
     computers::{DistanceComputed, DistanceKey},
-    data::{save, Format},
+    data::{Format, save},
     localize,
 };
 use egui::{RichText, Ui, Window};

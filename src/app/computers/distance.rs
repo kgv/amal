@@ -1,7 +1,4 @@
-use crate::{
-    app::panes::distance::settings::{Order, Settings, Sort},
-    special::expressions::fatty_acid::{ExprExt as _, FattyAcid as _},
-};
+use crate::app::panes::distance::settings::{Order, Settings, Sort};
 use egui::util::cache::{ComputerMut, FrameCache};
 use polars::prelude::*;
 use std::hash::{Hash, Hasher};
@@ -20,14 +17,14 @@ impl Computer {
         lazy_frame = lazy_frame
             .clone()
             .select([
-                as_struct(vec![col("FA"), col("Mode")]).alias("From"),
-                col("Time")
+                as_struct(vec![col("FattyAcid"), col("Mode")]).alias("From"),
+                col("RetentionTime")
                     .struct_()
                     .field_by_name("Absolute")
                     .struct_()
                     .field_by_name("Mean")
                     .alias("FromTime"),
-                col("Equivalent")
+                col("ChainLength")
                     .struct_()
                     .field_by_name("ECL")
                     .alias("FromECL"),
@@ -37,14 +34,14 @@ impl Computer {
             .with(
                 lazy_frame
                     .select([
-                        as_struct(vec![col("FA"), col("Mode")]).alias("To"),
-                        col("Time")
+                        as_struct(vec![col("FattyAcid"), col("Mode")]).alias("To"),
+                        col("RetentionTime")
                             .struct_()
                             .field_by_name("Absolute")
                             .struct_()
                             .field_by_name("Mean")
                             .alias("ToTime"),
-                        col("Equivalent")
+                        col("ChainLength")
                             .struct_()
                             .field_by_name("ECL")
                             .alias("ToECL"),
@@ -81,8 +78,12 @@ impl Computer {
         // Cache
         lazy_frame = lazy_frame.cache().select([
             col("From").struct_().field_by_name("Mode").alias("Mode"),
-            col("From").struct_().field_by_name("FA").name().keep(),
-            col("To").struct_().field_by_name("FA").name().keep(),
+            col("From")
+                .struct_()
+                .field_by_name("FattyAcid")
+                .name()
+                .keep(),
+            col("To").struct_().field_by_name("FattyAcid").name().keep(),
             as_struct(vec![
                 col("FromTime").alias("From"),
                 col("ToTime").alias("To"),
@@ -90,7 +91,7 @@ impl Computer {
                     .over([col("From").struct_().field_by_name("Mode")])
                     .alias("Delta"),
             ])
-            .alias("Time"),
+            .alias("RetentionTime"),
             as_struct(vec![
                 col("FromECL").alias("From"),
                 col("ToECL").alias("To"),
@@ -116,7 +117,7 @@ impl Computer {
                 sort_options,
             ),
             Sort::Time => lazy_frame.sort_by_exprs(
-                [col("Time")
+                [col("RetentionTime")
                     .struct_()
                     .field_by_name("Delta")
                     .abs()
